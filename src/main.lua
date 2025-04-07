@@ -1,50 +1,50 @@
+-- Imports
 local map = require "map"
 local player = require "player"
+local utils = require "utils"
+
+local MAX_DISTANCE = 7
 
 function love.load()
   -- love.graphics.setDefaultFilter("nearest", "nearest")
   Map = map.load("level-1")
 
-  Player = player.new(2.5, 2.5, 45)
+  Player = player:new(2.5, 2.5)
+  Player:rotate(0)
+
+  Floor = utils.gradientMesh("vertical",
+    { 0, 0, 0 },
+    { 0, 0.6, 0 }
+  )
+
+  Sky = utils.gradientMesh("vertical",
+    { 0.7, 0.7, 1 },
+    { 0.2, 0.2, 0.6 },
+    { 0, 0, 0 }
+  )
 end
 
 function love.update()
-  local keyHeld = love.keyboard.isDown("left", "right", "up", "down")
-
   if love.keyboard.isDown("left") then
-    Player.facing:rotate(-5)
+    Player:rotate(-2.5)
   elseif love.keyboard.isDown("right") then
-    Player.facing:rotate(5)
+    Player:rotate(2.5)
   end
 
+  local movingKey = false
   if love.keyboard.isDown("up") then
-    print(Player.pos)
-    Player.speed = Player.speed + (Player.acceleration * love.timer.getDelta())
-    if Player.speed >= Player.maxSpeed then
-      Player.speed = Player.maxSpeed
-    end
+    Player:accel()
+    movingKey = true
   elseif love.keyboard.isDown("down") then
-    Player.speed = Player.speed - (Player.acceleration * love.timer.getDelta())
-    if Player.speed <= -Player.maxSpeed then
-      Player.speed = -Player.maxSpeed
-    end
+    Player:decel()
+    movingKey = true
   end
 
-  if Player.speed ~= 0 and not keyHeld then
-    if Player.speed > 0 then
-      Player.speed = Player.speed - (Player.acceleration * love.timer.getDelta() * 5)
-      if Player.speed < 0 then
-        Player.speed = 0
-      end
-    elseif Player.speed < 0 then
-      Player.speed = Player.speed + (Player.acceleration * love.timer.getDelta() * 5)
-      if Player.speed > 0 then
-        Player.speed = 0
-      end
-    end
+  if not movingKey then
+    Player:comeToStop()
   end
 
-  Player.pos = Player.pos + Player.facing * Player.speed * love.timer.getDelta()
+  Player:move(love.timer.getDelta())
 
   -- check inside a wall
   if Map[math.floor(Player.pos.x)][math.floor(Player.pos.y)].isWall then
@@ -54,19 +54,76 @@ function love.update()
   end
 end
 
+-- Brute-force raycasting algorithm
+-- This is a simple implementation of raycasting that checks for wall collisions
+local function castRay(pos, dir)
+  local step = 0.02
+  local x, y = pos.x, pos.y
+  local dx, dy = dir.x, dir.y
+
+  local distance = 0
+  while distance < MAX_DISTANCE do
+    x = x + dx * step
+    y = y + dy * step
+    distance = distance + step
+
+    local cellX = math.floor(x)
+    local cellY = math.floor(y)
+
+    -- Check if the cell is a wall
+    if Map[cellX] and Map[cellX][cellY] and Map[cellX][cellY].isWall then
+      return distance
+    end
+  end
+
+  return -1
+end
+
+
 function love.draw()
   love.graphics.setColor(1, 1, 1)
   love.graphics.clear()
-  love.graphics.scale(2, 2)
 
   local image = Map.tiles["wall_1"]
   local tileWidth = image:getWidth()
   local tileHeight = image:getHeight()
-  love.graphics.translate(-tileWidth, -tileHeight)
+
+  -- draw a floor
+  love.graphics.draw(Floor, 0, love.graphics.getHeight() / 2, 0, love.graphics.getWidth(), love.graphics.getHeight() / 2)
+  -- draw a sky
+  love.graphics.draw(Sky, 0, 0, 0, love.graphics.getWidth(), love.graphics.getHeight() / 2)
+
+  -- draw walls using raycasting
+  for screenX = 0, love.graphics.getWidth() do
+    local ray = Player:getRay(screenX)
+
+    local dist = castRay(Player.pos, ray)
+    if dist > 0 then
+      -- correct the distance to the wall for the fish-eye effect
+      local wallHeightDist = dist * math.cos(math.atan2(ray.y, ray.x) - math.atan2(Player.facing.y, Player.facing.x))
+
+      -- the height of the wall on the screen is inversely proportional to the distance
+      -- also correct for aspect ratio
+      local wallHeight = love.graphics.getHeight() / wallHeightDist
+      wallHeight = wallHeight * (love.graphics.getWidth() / love.graphics.getHeight()) * 0.75
+
+      local wallY = (love.graphics.getHeight() - wallHeight) / 2
+
+      -- logarithmic color gradient for walls
+      local c = 1 - math.log(dist) / math.log(MAX_DISTANCE)
+      c = c * 0.75
+      love.graphics.setColor(c, c + 0.05, c + 0.05)
+
+      love.graphics.rectangle("fill", screenX, wallY, love.graphics.getWidth() / love.graphics.getWidth(), wallHeight)
+    end
+  end
+
+  love.graphics.setColor(1, 1, 1)
 
   -- Draw the map
-  for i = 1, Map.width do
-    for j = 1, Map.height do
+  love.graphics.scale(0.75, 0.75)
+  for i = 1, Map.height do
+    for j = 1, Map.width do
       local cell = Map[i][j]
       if cell.isWall then
         local x = i * tileWidth
@@ -89,9 +146,10 @@ function love.draw()
     (Player.pos.x + Player.facing.x) * tileWidth,
     (Player.pos.y + Player.facing.y) * tileHeight
   )
+  love.graphics.scale(1.3333, 1.3333)
 
   -- Show the FPS
-  love.graphics.scale(0.5, 0.5)
-  love.graphics.setColor(1, 1, 1)
-  love.graphics.print("FPS: " .. love.timer.getFPS(), 10, 10)
+  love.graphics.setColor(0, 0, 0)
+  love.graphics.setFont(love.graphics.newFont(22))
+  love.graphics.print("FPS: " .. love.timer.getFPS(), love.graphics.getWidth() - 85, 5)
 end

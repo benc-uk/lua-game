@@ -17,6 +17,9 @@ function love.conf(conf)
   conf.window.height = 768
   conf.window.title = "LuaCave"
   conf.window.icon = "assets/icons/main.png"
-  conf.window.x = 20
-  conf.window.y = 40
+
+  if IS_DEBUG then
+    conf.window.x = 20
+    conf.window.y = 40
+  end
 end

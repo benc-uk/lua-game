@@ -9,12 +9,10 @@ local function load(path)
   -- loop over files and load images
   for _, file in ipairs(files) do
     local ok, image = pcall(love.graphics.newImage, path .. "/" .. file)
-    if not ok then goto continue end
-
-    local fileName = file:match("(.+)%..+")
-    cache[fileName] = image
-
-    ::continue::
+    if ok then
+      local fileName = file:match("(.+)%..+")
+      cache[fileName] = image
+    end
   end
 
   return cache

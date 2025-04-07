@@ -24,32 +24,45 @@ function vec2:__add(v)
   return vec2:new(self.x + v.x, self.y + v.y)
 end
 
+-- Subtract another vector from this vector in place
 function vec2:sub(v)
   self.x = self.x - v.x
   self.y = self.y - v.y
 end
 
+-- Subtract another vector from this vector and return a new vector
 function vec2:subNew(v)
   return vec2:new(self.x - v.x, self.y - v.y)
 end
 
+-- Subtract another vector from this vector and return a new vector
 function vec2:__sub(v)
   return vec2:new(self.x - v.x, self.y - v.y)
 end
 
+-- Scale the vector in place by a scalar
 function vec2:scale(f)
   self.x = self.x * f
   self.y = self.y * f
 end
 
+-- Scale the vector by a scalar and return a new scaled vector
 function vec2:scaleNew(f)
   return vec2:new(self.x * f, self.y * f)
 end
 
-function vec2:__mul(f)
-  return vec2:new(self.x * f, self.y * f)
+-- multiplication with a scalar or another vector
+function vec2:__mul(o)
+  if type(o) == "number" then
+    return vec2:new(self.x * o, self.y * o)
+  elseif getmetatable(o) == vec2 then
+    return vec2:new(self.x * o.x, self.y * o.y)
+  else
+    error("Invalid operand for vec2 multiplication")
+  end
 end
 
+-- Normalize the vector in place
 function vec2:normalize()
   local length = math.sqrt(self.x ^ 2 + self.y ^ 2)
   if length > 0 then
@@ -58,6 +71,7 @@ function vec2:normalize()
   end
 end
 
+-- Normalize the vector and return a new normalized vector
 function vec2:normalizeNew()
   local length = math.sqrt(self.x ^ 2 + self.y ^ 2)
   if length > 0 then
@@ -67,26 +81,27 @@ function vec2:normalizeNew()
   end
 end
 
+-- Returns the dot product of two 2D vectors
 function vec2:dot(v)
   return self.x * v.x + self.y * v.y
 end
 
+-- Returns the cross product of two 2D vectors
 function vec2:cross(v)
   return self.x * v.y - self.y * v.x
 end
 
+-- Returns the length of the vector
 function vec2:length()
   return math.sqrt(self.x ^ 2 + self.y ^ 2)
 end
 
+-- Returns the distance between two vectors
 function vec2:distance(v)
   return math.sqrt((self.x - v.x) ^ 2 + (self.y - v.y) ^ 2)
 end
 
-function vec2:angle()
-  return math.atan2(self.y, self.x)
-end
-
+-- Rotate the vector by a given angle in degrees
 function vec2:rotate(deg)
   local rad = math.rad(deg)
   local cos = math.cos(rad)

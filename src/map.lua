@@ -14,14 +14,6 @@ end
 local function load(mapName)
   print("Loading map: " .. mapName)
 
-  local map = {}
-  for i = 1, 10 do
-    map[i] = {}
-    for j = 1, 10 do
-      map[i][j] = newCell(i, j)
-    end
-  end
-
   -- Load the map data from JSON file in data/maps/level1.json
   local filePath = "data/maps/" .. mapName .. ".json"
   local data, _ = love.filesystem.read(filePath)
@@ -30,7 +22,15 @@ local function load(mapName)
   local mapData = json.decode(data)
   assert(mapData, "Error decoding map JSON: " .. filePath)
 
-  print("Map loaded and decoded successfully")
+  print("Map loaded and decoded successfully, width: " .. mapData.width .. ", height: " .. mapData.height)
+
+  local map = {}
+  for i = 1, mapData.height do
+    map[i] = {}
+    for j = 1, mapData.width do
+      map[i][j] = newCell(i, j)
+    end
+  end
 
   -- loop over mapData.layout and fill the map with cells
   for rowIndex = 1, #mapData.layout do
@@ -46,8 +46,8 @@ local function load(mapName)
 
   map.name = "Demo Dungeon"
   map.tileSetName = "dungeon"
-  map.width = mapData.width or 10
-  map.height = mapData.height or 10
+  map.width = mapData.width
+  map.height = mapData.height
 
   map.tiles = cache.load("assets/tilesets/" .. map.tileSetName)
 

@@ -36,6 +36,13 @@ if (-Not (Test-Path $outputPath)) {
 $zipFileName = Join-Path $outputPath "out.love"
 $exeFileName = Join-Path $outputPath "out.exe"
 
+# Remove existing files
+if (Test-Path $zipFileName) {
+    Remove-Item $zipFileName -Force
+    Remove-Item $exeFileName -Force
+}
+
+
 echo "📚 Compressing project to: $zipFileName"
 Compress-Archive -Path $srcPath\* -DestinationPath $zipFileName -Force
 
