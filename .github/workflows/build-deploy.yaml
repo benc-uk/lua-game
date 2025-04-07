@@ -31,7 +31,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
@@ -39,14 +39,14 @@ jobs:
         uses: actions/setup-node@v4
 
       - name: Build using love.js
-        run: npx love.js ./src/ dist/web -c -t "LuaMaze"
-        
+        run: npx love.js ./src/ dist/web -t "LuaMaze"
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           # Upload entire repository
-          path: './dist/web'
-          
+          path: "./dist/web"
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
