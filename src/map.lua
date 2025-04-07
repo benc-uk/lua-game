@@ -1,5 +1,5 @@
 local json = require "lib.rxi.json"
-local tileset = require "tileset"
+local cache = require "image_cache"
 
 local function newCell(x, y)
   return {
@@ -49,7 +49,7 @@ local function load(mapName)
   map.width = mapData.width or 10
   map.height = mapData.height or 10
 
-  map.tileSet = tileset.load(map.tileSetName)
+  map.tiles = cache.load("assets/tilesets/" .. map.tileSetName)
 
   return map
 end
