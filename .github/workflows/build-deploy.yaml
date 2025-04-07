@@ -68,7 +68,7 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-  build-core:
+  package:
     needs: [test-lint]
     runs-on: ubuntu-latest
     env:
@@ -76,13 +76,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build core love package
+      - name: Build love package
         uses: love-actions/love-actions-core@v1
         with:
           build-list: ./src/*
           package-path: ${{ env.LOVE_PACKAGE_PATH }}
 
-      - name: Upload core love package
+      - name: Upload love package
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.LOVE_ARTIFACT_NAME }}
@@ -90,13 +90,13 @@ jobs:
 
   build-windows:
     runs-on: windows-latest
-    needs: [build-core]
+    needs: [package]
     env:
       OUTPUT_FOLDER: ./build
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download core love package
+      - name: Download love package
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.LOVE_ARTIFACT_NAME }}
