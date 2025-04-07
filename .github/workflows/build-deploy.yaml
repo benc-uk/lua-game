@@ -82,6 +82,8 @@ jobs:
 
       - name: Luacheck linter
         uses: lunarmodules/luacheck@v1
+        with:
+          args: ./src/*.lua
 
       - name: Love actions for testing
         uses: love-actions/love-actions-test@v1
