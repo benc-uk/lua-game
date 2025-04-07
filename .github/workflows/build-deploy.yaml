@@ -23,7 +23,7 @@ concurrency:
 
 env:
   LOVE_PACKAGE_PATH: ./game.love
-  LOVE_ARTIFACT_NAME: game_love_package
+  LOVE_ARTIFACT_NAME: game.love
 
 jobs:
   # Single deploy job since we're just deploying
@@ -74,17 +74,21 @@ jobs:
           name: ${{ env.LOVE_ARTIFACT_NAME }}
           path: ${{ env.LOVE_PACKAGE_PATH }}
 
-  auto-test:
+  test-lint:
     runs-on: ubuntu-latest
     needs: build-core
     steps:
       - uses: actions/checkout@v4
+
+      - name: Luacheck linter
+        uses: lunarmodules/luacheck@v1
+
       - name: Love actions for testing
         uses: love-actions/love-actions-test@v1
 
   build-windows:
     runs-on: windows-latest
-    needs: [build-core, auto-test]
+    needs: [build-core, test-lint]
     env:
       OUTPUT_FOLDER: ./build
     steps:
@@ -103,18 +107,15 @@ jobs:
           product-name: LuaCave
           app-id: E62A5E2F-8F1D-42A9-B0D3-B7645A3F56B7
           output-folder: ${{ env.OUTPUT_FOLDER }}
-          # - name: Upload 32-bit artifact
-          #   uses: actions/upload-artifact@v4
-          #   with:
-          #     name: ${{ needs.get-info.outputs.base-name }}_Windows_x86
-          #     path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}_x86.zip
-          # - name: Upload 64-bit artifact
-          #   uses: actions/upload-artifact@v4
-          #   with:
-          #     name: ${{ needs.get-info.outputs.base-name }}_Windows_x64
-          #     path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}_x64.zip
-          # - name: Upload installer artifact
-          #   uses: actions/upload-artifact@v4
-          #   with:
-          #     name: ${{ needs.get-info.outputs.base-name }}_Windows_installer
-          #     path: ${{ env.OUTPUT_FOLDER }}/${{ env.PRODUCT_NAME }}_installer.exe
+
+      - name: Upload 32-bit artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LuaCave_Windows_x86
+          path: ./build/LuaCave_x86.zip
+
+      - name: Upload 64-bit artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LuaCave_Windows_x64
+          path: ./build/LuaCave_x64.zip
