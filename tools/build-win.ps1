@@ -42,7 +42,6 @@ if (Test-Path $zipFileName) {
     Remove-Item $exeFileName -Force
 }
 
-
 echo "📚 Compressing project to: $zipFileName"
 Compress-Archive -Path $srcPath\* -DestinationPath $zipFileName -Force
 
