@@ -1,6 +1,6 @@
 local COLOR_MUL = 1
 
-function gradientMesh(dir, ...)
+local function gradientMesh(dir, ...)
   -- Check for direction
   local isHorizontal = true
   if dir == "vertical" then
