@@ -51,6 +51,13 @@ local function load(mapName)
 
   map.tiles = cache.load("assets/tilesets/" .. map.tileSetName)
 
+  function map:get(x, y)
+    if x < 1 or x > self.width or y < 1 or y > self.height then
+      return nil
+    end
+    return self[math.floor(x)][math.floor(y)]
+  end
+
   return map
 end
 

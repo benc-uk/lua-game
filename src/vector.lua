@@ -121,4 +121,67 @@ function vec2:__tostring()
   return string.format("vec2(%f, %f)", self.x, self.y)
 end
 
+function vec2:castRay(dir, hitFunc)
+  -- current map position
+  local mapPos = { x = math.floor(self.x), y = math.floor(self.y) }
+
+  -- length of ray from current position to next x or y-side
+  local sideDistX, sideDistY
+
+  -- length of ray from one x or y-side to next x or y-side
+  local deltaDistX = math.abs(1 / dir.x)
+  local deltaDistY = math.abs(1 / dir.y)
+  local perpWallDist
+
+  -- what direction to step in x or y direction (either +1 or -1)
+  local stepX, stepY
+
+  -- determine step direction and initial sideDist
+  if dir.x < 0 then
+    stepX = -1
+    sideDistX = (self.x - mapPos.x) * deltaDistX
+  else
+    stepX = 1
+    sideDistX = (mapPos.x + 1.0 - self.x) * deltaDistX
+  end
+  if dir.y < 0 then
+    stepY = -1
+    sideDistY = (self.y - mapPos.y) * deltaDistY
+  else
+    stepY = 1
+    sideDistY = (mapPos.y + 1.0 - self.y) * deltaDistY
+  end
+
+  -- perform DDA
+  local hit = false
+  local side
+  local steps = 0
+  while not hit and steps < 16 do
+    -- jump to next map square, either in x-direction, or in y-direction
+    if sideDistX < sideDistY then
+      sideDistX = sideDistX + deltaDistX
+      mapPos.x = mapPos.x + stepX
+      side = 0
+    else
+      sideDistY = sideDistY + deltaDistY
+      mapPos.y = mapPos.y + stepY
+      side = 1
+    end
+
+    -- check if ray has hit something
+    hit = hitFunc(mapPos.x, mapPos.y)
+
+    steps = steps + 1
+  end
+
+  -- calculate distance projected on camera direction
+  if side == 0 then
+    perpWallDist = (mapPos.x - self.x + (1 - stepX) / 2) / dir.x
+  else
+    perpWallDist = (mapPos.y - self.y + (1 - stepY) / 2) / dir.y
+  end
+
+  return perpWallDist
+end
+
 return vec2
