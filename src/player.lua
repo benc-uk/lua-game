@@ -11,8 +11,8 @@ function player:new(x, y)
     speed = 0,
 
     -- Constants
-    fov = 60,
-    fovRad = math.rad(60),
+    fov = 70,
+    fovRad = math.rad(70),
     maxSpeed = 3,
     acceleration = 4,
   }

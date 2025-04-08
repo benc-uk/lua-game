@@ -131,7 +131,7 @@ function vec2:castRay(dir, hitFunc)
   -- length of ray from one x or y-side to next x or y-side
   local deltaDistX = math.abs(1 / dir.x)
   local deltaDistY = math.abs(1 / dir.y)
-  local perpWallDist
+  local hitDist
 
   -- what direction to step in x or y direction (either +1 or -1)
   local stepX, stepY
@@ -176,12 +176,20 @@ function vec2:castRay(dir, hitFunc)
 
   -- calculate distance projected on camera direction
   if side == 0 then
-    perpWallDist = (mapPos.x - self.x + (1 - stepX) / 2) / dir.x
+    hitDist = (mapPos.x - self.x + (1 - stepX) / 2) / dir.x
   else
-    perpWallDist = (mapPos.y - self.y + (1 - stepY) / 2) / dir.y
+    hitDist = (mapPos.y - self.y + (1 - stepY) / 2) / dir.y
   end
 
-  return perpWallDist
+  -- for texture mapping
+  local wallX
+  if side == 0 then
+    wallX = self.y + hitDist * dir.y
+  else
+    wallX = self.x + hitDist * dir.x
+  end
+
+  return { dist = hitDist, wallX = wallX, side = side, mapX = mapPos.x, mapY = mapPos.y }
 end
 
 return vec2

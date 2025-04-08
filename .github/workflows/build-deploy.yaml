@@ -22,7 +22,7 @@ concurrency:
 env:
   LOVE_PACKAGE_PATH: ./game.love
   LOVE_ARTIFACT_NAME: game.love
-  LOVE_PRODUCT_NAME: LuaCave
+  LOVE_PRODUCT_NAME: LuaDungeon
 
 jobs:
   test-lint:
@@ -113,5 +113,5 @@ jobs:
       - name: Upload 64-bit artifact
         uses: actions/upload-artifact@v4
         with:
-          name: LuaCave_Windows_x64
+          name: Windows_x64
           path: ./build/${{ env.LOVE_PRODUCT_NAME }}_x64.zip

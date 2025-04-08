@@ -15,7 +15,7 @@ math.randomseed(os.time())
 function love.conf(conf)
   conf.window.width = 1024
   conf.window.height = 768
-  conf.window.title = "LuaCave"
+  conf.window.title = "Lua Dungeon"
   conf.window.icon = "assets/icons/main.png"
 
   if IS_DEBUG then

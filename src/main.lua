@@ -4,7 +4,7 @@ local player = require "player"
 local utils = require "utils"
 
 function love.load()
-  -- love.graphics.setDefaultFilter("nearest", "nearest")
+  love.graphics.setDefaultFilter("nearest", "nearest")
   Map = map.load("level-1")
 
   Player = player:new(2.5, 2.5)
@@ -12,13 +12,13 @@ function love.load()
 
   Floor = utils.gradientMesh("vertical",
     { 0, 0, 0 },
-    { 0, 0.6, 0 }
+    { 0.4, 0.4, 0.48 }
   )
 
   Sky = utils.gradientMesh("vertical",
-    { 0.7, 0.7, 1 },
-    { 0.2, 0.2, 0.6 },
+    { 0.48, 0.4, 0.4 },
     { 0, 0, 0 }
+
   )
 end
 
@@ -61,11 +61,15 @@ function love.draw()
   -- draw sky
   love.graphics.draw(Sky, 0, 0, 0, love.graphics.getWidth(), love.graphics.getHeight() / 2)
 
+
+  local tileWidth = Map.tiles.size.width
+  local tileHeight = Map.tiles.size.height
+
   -- draw walls using raycasting
   for screenX = 0, love.graphics.getWidth() do
     local ray = Player:getRay(screenX)
 
-    local dist = Player.pos:castRay(ray, function(x, y)
+    local hit = Player.pos:castRay(ray, function(x, y)
       local cell = Map:get(x, y)
       if cell and cell.isWall then
         return true
@@ -73,29 +77,46 @@ function love.draw()
       return false
     end)
 
-    if dist > 0 then
+    if hit.dist > 0 then
+      local index = hit.mapX % 3
+      local wallTexture = Map.tiles.images["wall_" .. index + 1]
       -- correct the distance to the wall for the fish-eye effect
-      local wallHeightDist = dist * math.cos(math.atan2(ray.y, ray.x) - math.atan2(Player.facing.y, Player.facing.x))
+      local wallHeightDist = hit.dist * math.cos(math.atan2(ray.y, ray.x) - math.atan2(Player.facing.y, Player.facing.x))
 
       -- the height of the wall on the screen is inversely proportional to the distance
-      -- also correct for aspect ratio
+      -- also correct for aspect ratio and make it a bit squashed
       local wallHeight = love.graphics.getHeight() / wallHeightDist
-      wallHeight = wallHeight * (love.graphics.getWidth() / love.graphics.getHeight()) * 0.75
+      wallHeight = wallHeight * (love.graphics.getWidth() / love.graphics.getHeight()) * 0.6
 
       local wallY = (love.graphics.getHeight() - wallHeight) / 2
 
-      local light = 1 - math.log(dist) / math.log(8)
-      light = light * 0.75
-      love.graphics.setColor(light, light, light)
+      -- light falls off with distance inverse square law and should be clamped to 0 - 1
+      local light = (1 / (hit.dist * hit.dist))
+      if light > 1 then
+        light = 1
+      elseif light < 0 then
+        light = 0
+      end
+      light = light * 0.93 + 0.03 -- make it brighter
 
-      love.graphics.rectangle("fill", screenX, wallY, love.graphics.getWidth() / love.graphics.getWidth(), wallHeight)
+      -- texture mapping
+      local wallX = hit.wallX - math.floor(hit.wallX)
+
+      -- One pixel vertical slice of the texture
+      local wallSlice = love.graphics.newQuad(math.floor(wallX * tileWidth), 0, 1,
+        tileHeight, tileWidth, tileHeight)
+      love.graphics.setColor(light, light, light)
+      love.graphics.draw(wallTexture, wallSlice, screenX, wallY, 0, 1, wallHeight / tileHeight, 0, 0)
     end
   end
 
   -- Show the FPS
-  love.graphics.setColor(0.3, 0, 0)
+
   love.graphics.setFont(love.graphics.newFont(22))
-  love.graphics.print("FPS: " .. love.timer.getFPS(), love.graphics.getWidth() - 85, 5)
+  love.graphics.setColor(0, 0, 0)
+  love.graphics.print("FPS: " .. love.timer.getFPS(), love.graphics.getWidth() - 90, 5)
+  love.graphics.setColor(1, 1, 1)
+  love.graphics.print("FPS: " .. love.timer.getFPS(), love.graphics.getWidth() - 92, 3)
 end
 
 -- local function overlay()
