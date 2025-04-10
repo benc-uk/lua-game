@@ -16,30 +16,38 @@ end
 
 -- Draw the sprite on the screen projected on the 2D plane
 function sprite:draw(camPos, camDir, camPlane)
-  local fov = math.rad(70)
-  local spriteX = self.pos.x - camPos.x
-  local spriteY = self.pos.y - camPos.y
+  -- Calculate sprite position relative to camera
+  -- Sprites are anchored to the floor (bottom of the sprite is at y=0)
+  local spritePos = self.pos - camPos
 
-  local scalePlane = camPlane * math.tan(fov / 2)
+  -- Transform sprite with the inverse camera matrix
+  local invDet = 1.0 / (camPlane.x * camDir.y - camDir.x * camPlane.y)
+  local transformX = invDet * (camDir.y * spritePos.x - camDir.x * spritePos.y)
+  local transformY = invDet * (-camPlane.y * spritePos.x + camPlane.x * spritePos.y)
 
-
-  local invDet = 1 / (scalePlane.x * camDir.y - camDir.x * scalePlane.y)
-
-  local transformX = invDet * (camDir.y * spriteX - camDir.x * spriteY)
-  local transformY = invDet * (-scalePlane.y * spriteX + scalePlane.x * spriteY)
-
+  -- Don't draw sprites behind the camera
   if transformY <= 0 then return end
 
-  local screenX = (love.graphics.getWidth() / 2) * (1 + transformX / transformY)
+  -- Calculate screen position
+  local spriteScreenX = (love.graphics.getWidth() / 2) * (1 + transformX / transformY)
 
+  -- Calculate sprite dimensions on screen
   local spriteHeight = math.abs(love.graphics.getHeight() / transformY)
-  local spriteWidth = spriteHeight
+  local spriteWidth = spriteHeight -- Assuming square sprite
 
-  local drawStartY = -spriteHeight / 2 + love.graphics.getHeight() / 2
-  local drawStartX = -spriteWidth / 2 + screenX
+  -- draw sprie as if it's on he floor, with the bottom of the sprite at y=0
+  -- Calculate the starting y position for drawing the sprite
+  local drawStartY = (love.graphics.getHeight() / 2) + (spriteHeight * 0.20) - (spriteHeight / 2)
 
-  love.graphics.draw(self.image, drawStartX, drawStartY, 0, spriteWidth / self.image:getWidth(),
-    spriteHeight / self.image:getHeight())
+  -- Draw the sprite
+  love.graphics.draw(
+    self.image,
+    spriteScreenX - spriteWidth / 2,
+    drawStartY,
+    0,
+    spriteWidth / self.image:getWidth(),
+    spriteHeight / self.image:getHeight()
+  )
 end
 
 return sprite

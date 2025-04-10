@@ -2,22 +2,18 @@ local Vec2 = require "vector"
 
 local player = {}
 
-local FOV = 70
 
 function player:new(x, y)
-  --local planeScale = math.tan(math.rad(FOV / 2))
-
   local p = {
     pos = Vec2:new(x, y),
-    facing = Vec2:new(0, -1),
-    camPlane = Vec2:new(1, 0),
+    facing = Vec2:new(1, 0),
+    camPlane = Vec2:new(0, 0.66), -- Camera plane perpendicular to the facing direction
     angle = 0,
     speed = 0,
 
     -- Constants
     maxSpeed = 3,
     acceleration = 4,
-    fovRad = math.rad(FOV),
   }
 
   setmetatable(p, self)
@@ -34,13 +30,19 @@ function player:rotate(a)
     self.angle = self.angle + 360
   end
 
-  local rad = math.rad(self.angle)
-  self.facing.x = math.cos(rad)
-  self.facing.y = math.sin(rad)
+  local oldDirX = self.facing.x
+  local oldPlaneX = self.camPlane.x
+  local cosA = math.cos(math.rad(a))
+  local sinA = math.sin(math.rad(a))
 
-  -- Update camera plane based on the new facing direction
-  self.camPlane.x = -self.facing.y
-  self.camPlane.y = self.facing.x
+  self.facing.x = self.facing.x * cosA - self.facing.y * sinA
+  self.facing.y = oldDirX * sinA + self.facing.y * cosA
+
+  self.camPlane.x = self.camPlane.x * cosA - self.camPlane.y * sinA
+  self.camPlane.y = oldPlaneX * sinA + self.camPlane.y * cosA
+
+  print("Facing: " .. self.facing.x .. ", " .. self.facing.y)
+  print("CamPlane: " .. self.camPlane.x .. ", " .. self.camPlane.y)
 end
 
 function player:move(dt)
@@ -77,8 +79,9 @@ end
 
 function player:getRay(screenX)
   local ray = Vec2:new(0, 0)
-  ray.x = self.facing.x + (self.camPlane.x * (screenX / love.graphics.getWidth() - 0.5) * self.fovRad)
-  ray.y = self.facing.y + (self.camPlane.y * (screenX / love.graphics.getWidth() - 0.5) * self.fovRad)
+  local cameraX = 2 * screenX / love.graphics.getWidth() - 1 -- x-coordinate in camera space
+  ray.x = self.facing.x + self.camPlane.x * cameraX
+  ray.y = self.facing.y + self.camPlane.y * cameraX
   return ray:normalizeNew()
 end
 

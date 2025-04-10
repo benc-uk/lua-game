@@ -10,7 +10,6 @@ function love.load()
   Map = map:load("level-1")
 
   Player = player:new(2.5, 2.5)
-  Player:rotate(0)
 
   Floor = utils.gradientMesh("vertical",
     { 0, 0, 0 },
@@ -24,14 +23,14 @@ function love.load()
 
   SpriteCache = imageCache:load("assets/sprites")
   TestSprite = sprite:new(4.5, 2.5, "skeleton", SpriteCache)
-  TestSprite2 = sprite:new(2.5, 5.5, "barrel", SpriteCache)
+  TestSprite2 = sprite:new(2.5, 7.5, "barrel", SpriteCache)
 end
 
 function love.update()
   if love.keyboard.isDown("left") then
-    Player:rotate(-2.5)
+    Player:rotate(-2)
   elseif love.keyboard.isDown("right") then
-    Player:rotate(2.5)
+    Player:rotate(2)
   end
 
   local movingKey = false
@@ -93,7 +92,7 @@ function love.draw()
       -- the height of the wall on the screen is inversely proportional to the distance
       -- also correct for aspect ratio and make it a bit squashed
       local wallHeight = love.graphics.getHeight() / wallHeightDist
-      wallHeight = wallHeight * (love.graphics.getWidth() / love.graphics.getHeight()) * 0.65
+      wallHeight = wallHeight * (love.graphics.getWidth() / love.graphics.getHeight()) * 0.55
 
       local wallY = (love.graphics.getHeight() - wallHeight) / 2
 
