@@ -1,17 +1,18 @@
 local json = require "lib.rxi.json"
-local cache = require "image_cache"
+local imageCache = require "image-cache"
 
 local function newCell(x, y)
   return {
     x = x,
     y = y,
     isWall = false,
-    isDoor = false,
-    isExit = false,
+    item = nil,
   }
 end
 
-local function load(mapName)
+local map = {}
+
+function map:load(mapName)
   print("Loading map: " .. mapName)
 
   -- Load the map data from JSON file in data/maps/level1.json
@@ -24,11 +25,12 @@ local function load(mapName)
 
   print("Map loaded and decoded successfully, width: " .. mapData.width .. ", height: " .. mapData.height)
 
-  local map = {}
+  local m = {}
+  m.cells = {}
   for i = 1, mapData.height do
-    map[i] = {}
+    m.cells[i] = {}
     for j = 1, mapData.width do
-      map[i][j] = newCell(i, j)
+      m.cells[i][j] = newCell(i, j)
     end
   end
 
@@ -36,31 +38,32 @@ local function load(mapName)
   for rowIndex = 1, #mapData.layout do
     local dataRow = mapData.layout[rowIndex]
     for colIndex = 1, #dataRow do
-      local cell = map[colIndex][rowIndex]
+      local cell = m.cells[colIndex][rowIndex]
       local dataValue = dataRow[colIndex]
-      if dataValue == 1 then
+      if dataValue == "#" then
         cell.isWall = true
       end
     end
   end
 
-  map.name = "Demo Dungeon"
-  map.tileSetName = "dungeon"
-  map.width = mapData.width
-  map.height = mapData.height
+  m.name = "Demo Dungeon"
+  m.tileSetName = mapData.tileset
+  m.width = mapData.width
+  m.height = mapData.height
 
-  map.tiles = cache.load("assets/tilesets/" .. map.tileSetName)
+  m.tileSet = imageCache:load("assets/tilesets/" .. m.tileSetName)
 
-  function map:get(x, y)
-    if x < 1 or x > self.width or y < 1 or y > self.height then
-      return nil
-    end
-    return self[math.floor(x)][math.floor(y)]
-  end
+  setmetatable(m, self)
+  self.__index = self
 
-  return map
+  return m
 end
 
-return {
-  load = load,
-}
+function map:get(x, y)
+  if x < 1 or x > self.width or y < 1 or y > self.height then
+    return nil
+  end
+  return self.cells[math.floor(x)][math.floor(y)]
+end
+
+return map

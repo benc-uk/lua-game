@@ -1,5 +1,3 @@
-local COLOR_MUL = 1
-
 local function gradientMesh(dir, ...)
   -- Check for direction
   local isHorizontal = true
@@ -22,16 +20,16 @@ local function gradientMesh(dir, ...)
       local color = select(i, ...)
       local x = (i - 1) / (colorLen - 1)
 
-      meshData[#meshData + 1] = { x, 1, x, 1, color[1], color[2], color[3], color[4] or (1 * COLOR_MUL) }
-      meshData[#meshData + 1] = { x, 0, x, 0, color[1], color[2], color[3], color[4] or (1 * COLOR_MUL) }
+      meshData[#meshData + 1] = { x, 1, x, 1, color[1], color[2], color[3], color[4] or 1 }
+      meshData[#meshData + 1] = { x, 0, x, 0, color[1], color[2], color[3], color[4] or 1 }
     end
   else
     for i = 1, colorLen do
       local color = select(i, ...)
       local y = (i - 1) / (colorLen - 1)
 
-      meshData[#meshData + 1] = { 1, y, 1, y, color[1], color[2], color[3], color[4] or (1 * COLOR_MUL) }
-      meshData[#meshData + 1] = { 0, y, 0, y, color[1], color[2], color[3], color[4] or (1 * COLOR_MUL) }
+      meshData[#meshData + 1] = { 1, y, 1, y, color[1], color[2], color[3], color[4] or 1 }
+      meshData[#meshData + 1] = { 0, y, 0, y, color[1], color[2], color[3], color[4] or 1 }
     end
   end
 
@@ -39,6 +37,11 @@ local function gradientMesh(dir, ...)
   return love.graphics.newMesh(meshData, "strip", "static")
 end
 
+local function frac(n)
+  return n - math.floor(n)
+end
+
 return {
   gradientMesh = gradientMesh,
+  frac = frac,
 }

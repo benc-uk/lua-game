@@ -1,11 +1,13 @@
 -- Imports
-local map = require "map"
-local player = require "player"
-local utils = require "utils"
+local map        = require "map"
+local player     = require "player"
+local utils      = require "utils"
+local lume       = require "lib.rxi.lume"
+local imageCache = require "image-cache"
+local sprite     = require "sprite"
 
 function love.load()
-  love.graphics.setDefaultFilter("nearest", "nearest")
-  Map = map.load("level-1")
+  Map = map:load("level-1")
 
   Player = player:new(2.5, 2.5)
   Player:rotate(0)
@@ -18,8 +20,11 @@ function love.load()
   Sky = utils.gradientMesh("vertical",
     { 0.48, 0.4, 0.4 },
     { 0, 0, 0 }
-
   )
+
+  SpriteCache = imageCache:load("assets/sprites")
+  TestSprite = sprite:new(4.5, 2.5, "skeleton", SpriteCache)
+  TestSprite2 = sprite:new(2.5, 5.5, "barrel", SpriteCache)
 end
 
 function love.update()
@@ -45,7 +50,7 @@ function love.update()
   Player:move(love.timer.getDelta())
 
   -- check inside a wall
-  if Map[math.floor(Player.pos.x)][math.floor(Player.pos.y)].isWall then
+  if Map:get(Player.pos.x, Player.pos.y).isWall then
     -- Move back to the last position
     Player.pos = Player.pos - Player.facing * Player.speed * love.timer.getDelta()
     Player.speed = 0
@@ -62,13 +67,15 @@ function love.draw()
   love.graphics.draw(Sky, 0, 0, 0, love.graphics.getWidth(), love.graphics.getHeight() / 2)
 
 
-  local tileWidth = Map.tiles.size.width
-  local tileHeight = Map.tiles.size.height
+  local tileWidth = Map.tileSet.size.width
+  local tileHeight = Map.tileSet.size.height
 
   -- draw walls using raycasting
   for screenX = 0, love.graphics.getWidth() do
+    -- Genate a ray from the player position to the screen position
     local ray = Player:getRay(screenX)
 
+    -- Cast the ray to find the first wall hit
     local hit = Player.pos:castRay(ray, function(x, y)
       local cell = Map:get(x, y)
       if cell and cell.isWall then
@@ -78,32 +85,33 @@ function love.draw()
     end)
 
     if hit.dist > 0 then
-      local index = hit.mapX % 3
-      local wallTexture = Map.tiles.images["wall_" .. index + 1]
+      local wallTexture = Map.tileSet.images["wall_" .. hit.mapX % 3 + 1]
+
       -- correct the distance to the wall for the fish-eye effect
       local wallHeightDist = hit.dist * math.cos(math.atan2(ray.y, ray.x) - math.atan2(Player.facing.y, Player.facing.x))
 
       -- the height of the wall on the screen is inversely proportional to the distance
       -- also correct for aspect ratio and make it a bit squashed
       local wallHeight = love.graphics.getHeight() / wallHeightDist
-      wallHeight = wallHeight * (love.graphics.getWidth() / love.graphics.getHeight()) * 0.6
+      wallHeight = wallHeight * (love.graphics.getWidth() / love.graphics.getHeight()) * 0.65
 
       local wallY = (love.graphics.getHeight() - wallHeight) / 2
 
       -- light falls off with distance inverse square law and should be clamped to 0 - 1
-      local light = (1 / (hit.dist * hit.dist))
-      if light > 1 then
-        light = 1
-      elseif light < 0 then
-        light = 0
-      end
+      local light = lume.clamp(1 / (hit.dist * hit.dist), 0, 1)
+
       light = light * 0.93 + 0.03 -- make it brighter
 
-      -- texture mapping
-      local wallX = hit.wallX - math.floor(hit.wallX)
+      -- texture mapping, get fraction of the world pos to use as the u coordinate of the texture
+      local texU
+      if hit.side == 0 then
+        texU = utils.frac(hit.worldPos.y) -- vertical wall
+      else
+        texU = utils.frac(hit.worldPos.x) -- horizontal wall
+      end
 
       -- One pixel vertical slice of the texture
-      local wallSlice = love.graphics.newQuad(math.floor(wallX * tileWidth), 0, 1,
+      local wallSlice = love.graphics.newQuad(texU * tileWidth, 0, 1,
         tileHeight, tileWidth, tileHeight)
       love.graphics.setColor(light, light, light)
       love.graphics.draw(wallTexture, wallSlice, screenX, wallY, 0, 1, wallHeight / tileHeight, 0, 0)
@@ -111,12 +119,28 @@ function love.draw()
   end
 
   -- Show the FPS
-
   love.graphics.setFont(love.graphics.newFont(22))
   love.graphics.setColor(0, 0, 0)
   love.graphics.print("FPS: " .. love.timer.getFPS(), love.graphics.getWidth() - 90, 5)
   love.graphics.setColor(1, 1, 1)
   love.graphics.print("FPS: " .. love.timer.getFPS(), love.graphics.getWidth() - 92, 3)
+
+  TestSprite:draw(Player.pos, Player.facing, Player.camPlane)
+  TestSprite2:draw(Player.pos, Player.facing, Player.camPlane)
+end
+
+function love.keypressed(key)
+  if key == "escape" then
+    love.event.quit()
+  end
+
+  if key == "f" then
+    if Map.tileSet.filterMode == "nearest" then
+      Map.tileSet:setFilter("linear")
+    else
+      Map.tileSet:setFilter("nearest")
+    end
+  end
 end
 
 -- local function overlay()

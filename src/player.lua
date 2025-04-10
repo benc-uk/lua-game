@@ -2,7 +2,11 @@ local Vec2 = require "vector"
 
 local player = {}
 
+local FOV = 70
+
 function player:new(x, y)
+  --local planeScale = math.tan(math.rad(FOV / 2))
+
   local p = {
     pos = Vec2:new(x, y),
     facing = Vec2:new(0, -1),
@@ -11,10 +15,9 @@ function player:new(x, y)
     speed = 0,
 
     -- Constants
-    fov = 70,
-    fovRad = math.rad(70),
     maxSpeed = 3,
     acceleration = 4,
+    fovRad = math.rad(FOV),
   }
 
   setmetatable(p, self)

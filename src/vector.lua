@@ -181,15 +181,10 @@ function vec2:castRay(dir, hitFunc)
     hitDist = (mapPos.y - self.y + (1 - stepY) / 2) / dir.y
   end
 
-  -- for texture mapping
-  local wallX
-  if side == 0 then
-    wallX = self.y + hitDist * dir.y
-  else
-    wallX = self.x + hitDist * dir.x
-  end
+  -- world position of the hit
+  local worldPos = vec2:new(self.x + dir.x * hitDist, self.y + dir.y * hitDist)
 
-  return { dist = hitDist, wallX = wallX, side = side, mapX = mapPos.x, mapY = mapPos.y }
+  return { dist = hitDist, worldPos = worldPos, side = side, mapX = mapPos.x, mapY = mapPos.y }
 end
 
 return vec2
