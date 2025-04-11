@@ -13,7 +13,7 @@ end
 
 local map = {}
 
-function map:load(mapName, spriteCache)
+function map:load(mapName)
   print("Loading map: " .. mapName)
 
   -- Load the map data from JSON file in data/maps/level1.json
@@ -48,7 +48,7 @@ function map:load(mapName, spriteCache)
       end
 
       if dataValue == "a" then
-        local s = sprite:new(cell.x + 0.5, cell.y + 0.5, "barrel", spriteCache)
+        local s = sprite:new(cell.x + 0.5, cell.y + 0.5, "barrel")
         m.sprites[#m.sprites + 1] = s
       end
     end

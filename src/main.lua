@@ -1,4 +1,3 @@
--- Imports
 local map        = require "map"
 local player     = require "player"
 local utils      = require "utils"
@@ -7,9 +6,9 @@ local imageCache = require "image-cache"
 local magic      = require "magic"
 
 function love.load()
-  local spriteCache = imageCache:load("assets/sprites")
+  --local spriteCache = imageCache:load("assets/sprites")
 
-  Map = map:load("level-1", spriteCache)
+  Map = map:load("level-1")
 
   Player = player:new(2.5, 2.5)
 
@@ -127,12 +126,6 @@ function love.draw()
     local sprite = Map.sprites[s]
     sprite:draw(Player.pos, Player.facing, Player.camPlane)
   end
-
-  -- Draw a green line down the middle of the screen and across
-  love.graphics.setColor(0, 1, 0)
-  love.graphics.setLineWidth(1)
-  love.graphics.line(love.graphics.getWidth() / 2, 0, love.graphics.getWidth() / 2, love.graphics.getHeight())
-  love.graphics.line(0, love.graphics.getHeight() / 2, love.graphics.getWidth(), love.graphics.getHeight() / 2)
 end
 
 function love.keypressed(key)
@@ -150,6 +143,11 @@ function love.keypressed(key)
 end
 
 -- local function overlay()
+-- love.graphics.setColor(0, 1, 0)
+-- love.graphics.setLineWidth(1)
+-- love.graphics.line(love.graphics.getWidth() / 2, 0, love.graphics.getWidth() / 2, love.graphics.getHeight())
+-- love.graphics.line(0, love.graphics.getHeight() / 2, love.graphics.getWidth(), love.graphics.getHeight() / 2)
+
 --   local image = Map.tiles["wall_1"]
 --   local tileWidth = image:getWidth()
 --   local tileHeight = image:getHeight()

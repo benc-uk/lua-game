@@ -1,12 +1,16 @@
 local vec2 = require "vector"
 local magic = require "magic"
+local imageCache = require "image-cache"
+
 local sprite = {}
 
-function sprite:new(x, y, name, cache)
+local spriteImgCache = imageCache:load("assets/sprites")
+
+function sprite:new(x, y, name)
   local obj = {
     pos = vec2:new(x, y),
-    name = "bob",
-    image = cache.images[name],
+    name = name,
+    image = spriteImgCache.images[name],
     scale = 0.5,
   }
 
@@ -46,7 +50,10 @@ function sprite:draw(camPos, camDir, camPlane)
   -- The Y coordinate of the sprite on the screen
   local screenY = (love.graphics.getHeight() / 2) - (height / 2) + moveDown
 
+  local bright = 1 - (spritePos:length() / 7) -- Brightness based on distance
+
   -- Finally! Draw the sprite
+  love.graphics.setColor(bright, bright, bright) -- Reset color to white
   love.graphics.draw(
     self.image,
     screenX - width / 2,
