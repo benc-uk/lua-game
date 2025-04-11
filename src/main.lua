@@ -4,10 +4,12 @@ local player     = require "player"
 local utils      = require "utils"
 local lume       = require "lib.rxi.lume"
 local imageCache = require "image-cache"
-local sprite     = require "sprite"
+local magic      = require "magic"
 
 function love.load()
-  Map = map:load("level-1")
+  local spriteCache = imageCache:load("assets/sprites")
+
+  Map = map:load("level-1", spriteCache)
 
   Player = player:new(2.5, 2.5)
 
@@ -20,10 +22,6 @@ function love.load()
     { 0.48, 0.4, 0.4 },
     { 0, 0, 0 }
   )
-
-  SpriteCache = imageCache:load("assets/sprites")
-  TestSprite = sprite:new(4.5, 2.5, "skeleton", SpriteCache)
-  TestSprite2 = sprite:new(2.5, 7.5, "barrel", SpriteCache)
 end
 
 function love.update()
@@ -71,10 +69,10 @@ function love.draw()
 
   -- draw walls using raycasting
   for screenX = 0, love.graphics.getWidth() do
-    -- Genate a ray from the player position to the screen position
+    -- Create a ray from the player position to the screen position
     local ray = Player:getRay(screenX)
 
-    -- Cast the ray to find the first wall hit
+    -- Cast the ray from player pos, out to find the first wall hit
     local hit = Player.pos:castRay(ray, function(x, y)
       local cell = Map:get(x, y)
       if cell and cell.isWall then
@@ -86,19 +84,18 @@ function love.draw()
     if hit.dist > 0 then
       local wallTexture = Map.tileSet.images["wall_" .. hit.mapX % 3 + 1]
 
-      -- correct the distance to the wall for the fish-eye effect
+      -- Correct the distance to the wall for the fish-eye effect
       local wallHeightDist = hit.dist * math.cos(math.atan2(ray.y, ray.x) - math.atan2(Player.facing.y, Player.facing.x))
 
-      -- the height of the wall on the screen is inversely proportional to the distance
-      -- also correct for aspect ratio and make it a bit squashed
+      -- The height of the wall on the screen is inversely proportional to the distance
       local wallHeight = love.graphics.getHeight() / wallHeightDist
-      wallHeight = wallHeight * (love.graphics.getWidth() / love.graphics.getHeight()) * 0.55
+      -- Correct for the aspect ratio of the screen
+      wallHeight = wallHeight * (love.graphics.getWidth() / love.graphics.getHeight()) * magic.heightScale
 
       local wallY = (love.graphics.getHeight() - wallHeight) / 2
 
       -- light falls off with distance inverse square law and should be clamped to 0 - 1
       local light = lume.clamp(1 / (hit.dist * hit.dist), 0, 1)
-
       light = light * 0.93 + 0.03 -- make it brighter
 
       -- texture mapping, get fraction of the world pos to use as the u coordinate of the texture
@@ -124,8 +121,18 @@ function love.draw()
   love.graphics.setColor(1, 1, 1)
   love.graphics.print("FPS: " .. love.timer.getFPS(), love.graphics.getWidth() - 92, 3)
 
-  TestSprite:draw(Player.pos, Player.facing, Player.camPlane)
-  TestSprite2:draw(Player.pos, Player.facing, Player.camPlane)
+  -- Draw all the sprites in the map
+  love.graphics.setColor(1, 1, 1)
+  for s = 1, #Map.sprites do
+    local sprite = Map.sprites[s]
+    sprite:draw(Player.pos, Player.facing, Player.camPlane)
+  end
+
+  -- Draw a green line down the middle of the screen and across
+  love.graphics.setColor(0, 1, 0)
+  love.graphics.setLineWidth(1)
+  love.graphics.line(love.graphics.getWidth() / 2, 0, love.graphics.getWidth() / 2, love.graphics.getHeight())
+  love.graphics.line(0, love.graphics.getHeight() / 2, love.graphics.getWidth(), love.graphics.getHeight() / 2)
 end
 
 function love.keypressed(key)

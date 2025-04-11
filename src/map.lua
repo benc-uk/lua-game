@@ -1,5 +1,6 @@
-local json = require "lib.rxi.json"
+local json       = require "lib.rxi.json"
 local imageCache = require "image-cache"
+local sprite     = require "sprite"
 
 local function newCell(x, y)
   return {
@@ -12,7 +13,7 @@ end
 
 local map = {}
 
-function map:load(mapName)
+function map:load(mapName, spriteCache)
   print("Loading map: " .. mapName)
 
   -- Load the map data from JSON file in data/maps/level1.json
@@ -34,14 +35,21 @@ function map:load(mapName)
     end
   end
 
+  m.sprites = {}
   -- loop over mapData.layout and fill the map with cells
   for rowIndex = 1, #mapData.layout do
     local dataRow = mapData.layout[rowIndex]
     for colIndex = 1, #dataRow do
       local cell = m.cells[colIndex][rowIndex]
       local dataValue = dataRow[colIndex]
+
       if dataValue == "#" then
         cell.isWall = true
+      end
+
+      if dataValue == "a" then
+        local s = sprite:new(cell.x + 0.5, cell.y + 0.5, "barrel", spriteCache)
+        m.sprites[#m.sprites + 1] = s
       end
     end
   end

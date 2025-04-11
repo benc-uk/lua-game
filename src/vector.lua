@@ -1,5 +1,6 @@
 local vec2 = {}
 
+-- vec2 class constructor
 function vec2:new(x, y)
   local obj = { x = x or 0, y = y or 0 }
   setmetatable(obj, self)
@@ -7,19 +8,23 @@ function vec2:new(x, y)
   return obj
 end
 
+-- Create a new vec2 object with the same values as this one
 function vec2:clone()
   return vec2:new(self.x, self.y)
 end
 
+-- Add another vector to this vector in place
 function vec2:add(v)
   self.x = self.x + v.x
   self.y = self.y + v.y
 end
 
+-- Add another vector to this vector and return a new vector
 function vec2:addNew(v)
   return vec2:new(self.x + v.x, self.y + v.y)
 end
 
+-- Add another vector to this vector and return a new vector
 function vec2:__add(v)
   return vec2:new(self.x + v.x, self.y + v.y)
 end
@@ -121,9 +126,11 @@ function vec2:__tostring()
   return string.format("vec2(%f, %f)", self.x, self.y)
 end
 
+-- Cast a ray from the current position in the given direction and return the hit information
+-- Pass in a function that checks for a hits
 function vec2:castRay(dir, hitFunc)
   -- current map position
-  local mapPos = { x = math.floor(self.x), y = math.floor(self.y) }
+  local gridPos = { x = math.floor(self.x), y = math.floor(self.y) }
 
   -- length of ray from current position to next x or y-side
   local sideDistX, sideDistY
@@ -139,17 +146,17 @@ function vec2:castRay(dir, hitFunc)
   -- determine step direction and initial sideDist
   if dir.x < 0 then
     stepX = -1
-    sideDistX = (self.x - mapPos.x) * deltaDistX
+    sideDistX = (self.x - gridPos.x) * deltaDistX
   else
     stepX = 1
-    sideDistX = (mapPos.x + 1.0 - self.x) * deltaDistX
+    sideDistX = (gridPos.x + 1.0 - self.x) * deltaDistX
   end
   if dir.y < 0 then
     stepY = -1
-    sideDistY = (self.y - mapPos.y) * deltaDistY
+    sideDistY = (self.y - gridPos.y) * deltaDistY
   else
     stepY = 1
-    sideDistY = (mapPos.y + 1.0 - self.y) * deltaDistY
+    sideDistY = (gridPos.y + 1.0 - self.y) * deltaDistY
   end
 
   -- perform DDA
@@ -160,31 +167,31 @@ function vec2:castRay(dir, hitFunc)
     -- jump to next map square, either in x-direction, or in y-direction
     if sideDistX < sideDistY then
       sideDistX = sideDistX + deltaDistX
-      mapPos.x = mapPos.x + stepX
+      gridPos.x = gridPos.x + stepX
       side = 0
     else
       sideDistY = sideDistY + deltaDistY
-      mapPos.y = mapPos.y + stepY
+      gridPos.y = gridPos.y + stepY
       side = 1
     end
 
     -- check if ray has hit something
-    hit = hitFunc(mapPos.x, mapPos.y)
+    hit = hitFunc(gridPos.x, gridPos.y)
 
     steps = steps + 1
   end
 
   -- calculate distance projected on camera direction
   if side == 0 then
-    hitDist = (mapPos.x - self.x + (1 - stepX) / 2) / dir.x
+    hitDist = (gridPos.x - self.x + (1 - stepX) / 2) / dir.x
   else
-    hitDist = (mapPos.y - self.y + (1 - stepY) / 2) / dir.y
+    hitDist = (gridPos.y - self.y + (1 - stepY) / 2) / dir.y
   end
 
   -- world position of the hit
   local worldPos = vec2:new(self.x + dir.x * hitDist, self.y + dir.y * hitDist)
 
-  return { dist = hitDist, worldPos = worldPos, side = side, mapX = mapPos.x, mapY = mapPos.y }
+  return { dist = hitDist, worldPos = worldPos, side = side, mapX = gridPos.x, mapY = gridPos.y }
 end
 
 return vec2

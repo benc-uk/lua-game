@@ -1,4 +1,5 @@
 local vec2 = require "vector"
+local magic = require "magic"
 local sprite = {}
 
 function sprite:new(x, y, name, cache)
@@ -6,6 +7,7 @@ function sprite:new(x, y, name, cache)
     pos = vec2:new(x, y),
     name = "bob",
     image = cache.images[name],
+    scale = 0.5,
   }
 
   setmetatable(obj, self)
@@ -17,36 +19,41 @@ end
 -- Draw the sprite on the screen projected on the 2D plane
 function sprite:draw(camPos, camDir, camPlane)
   -- Calculate sprite position relative to camera
-  -- Sprites are anchored to the floor (bottom of the sprite is at y=0)
   local spritePos = self.pos - camPos
+  local aspect = love.graphics.getWidth() / love.graphics.getHeight()
 
   -- Transform sprite with the inverse camera matrix
   local invDet = 1.0 / (camPlane.x * camDir.y - camDir.x * camPlane.y)
-  local transformX = invDet * (camDir.y * spritePos.x - camDir.x * spritePos.y)
-  local transformY = invDet * (-camPlane.y * spritePos.x + camPlane.x * spritePos.y)
+  local transX = invDet * (camDir.y * spritePos.x - camDir.x * spritePos.y)
+  local transY = invDet * (-camPlane.y * spritePos.x + camPlane.x * spritePos.y)
 
-  -- Don't draw sprites behind the camera
-  if transformY <= 0 then return end
+  -- Don't draw sprites behind the camera!
+  if transY <= 0 then return end
 
   -- Calculate screen position
-  local spriteScreenX = (love.graphics.getWidth() / 2) * (1 + transformX / transformY)
+  local screenX = (love.graphics.getWidth() / 2) * (1 + transX / transY)
 
   -- Calculate sprite dimensions on screen
-  local spriteHeight = math.abs(love.graphics.getHeight() / transformY)
-  local spriteWidth = spriteHeight -- Assuming square sprite
+  local height = math.abs(love.graphics.getHeight() / transY) * self.scale
+  local width = height -- Assuming square sprite
 
-  -- draw sprie as if it's on he floor, with the bottom of the sprite at y=0
-  -- Calculate the starting y position for drawing the sprite
-  local drawStartY = (love.graphics.getHeight() / 2) + (spriteHeight * 0.20) - (spriteHeight / 2)
+  -- Correct for the aspect ratio of the screen
+  width = width * aspect * magic.heightScale
+  height = height * aspect * magic.heightScale
 
-  -- Draw the sprite
+  -- Move the sprite down to place it on the ground
+  local moveDown = height * (1 / self.scale) * 0.5 - height * 0.5
+  -- The Y coordinate of the sprite on the screen
+  local screenY = (love.graphics.getHeight() / 2) - (height / 2) + moveDown
+
+  -- Finally! Draw the sprite
   love.graphics.draw(
     self.image,
-    spriteScreenX - spriteWidth / 2,
-    drawStartY,
+    screenX - width / 2,
+    screenY,
     0,
-    spriteWidth / self.image:getWidth(),
-    spriteHeight / self.image:getHeight()
+    width / self.image:getWidth(),
+    height / self.image:getHeight()
   )
 end
 

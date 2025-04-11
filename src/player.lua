@@ -1,19 +1,19 @@
 local Vec2 = require "vector"
+local magic = require "magic"
 
 local player = {}
 
-
 function player:new(x, y)
   local p = {
-    pos = Vec2:new(x, y),
-    facing = Vec2:new(1, 0),
-    camPlane = Vec2:new(0, 0.66), -- Camera plane perpendicular to the facing direction
-    angle = 0,
-    speed = 0,
-
     -- Constants
     maxSpeed = 3,
     acceleration = 4,
+
+    pos = Vec2:new(x, y),
+    facing = Vec2:new(1, 0),
+    camPlane = Vec2:new(0, magic.FOV), -- Camera plane perpendicular to the facing direction
+    angle = 0,
+    speed = 0,
   }
 
   setmetatable(p, self)
@@ -30,19 +30,10 @@ function player:rotate(a)
     self.angle = self.angle + 360
   end
 
-  local oldDirX = self.facing.x
-  local oldPlaneX = self.camPlane.x
-  local cosA = math.cos(math.rad(a))
-  local sinA = math.sin(math.rad(a))
-
-  self.facing.x = self.facing.x * cosA - self.facing.y * sinA
-  self.facing.y = oldDirX * sinA + self.facing.y * cosA
-
-  self.camPlane.x = self.camPlane.x * cosA - self.camPlane.y * sinA
-  self.camPlane.y = oldPlaneX * sinA + self.camPlane.y * cosA
-
-  print("Facing: " .. self.facing.x .. ", " .. self.facing.y)
-  print("CamPlane: " .. self.camPlane.x .. ", " .. self.camPlane.y)
+  self.facing.x = math.cos(math.rad(self.angle))
+  self.facing.y = math.sin(math.rad(self.angle))
+  self.camPlane.x = -self.facing.y * magic.FOV
+  self.camPlane.y = self.facing.x * magic.FOV
 end
 
 function player:move(dt)
