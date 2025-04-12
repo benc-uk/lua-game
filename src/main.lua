@@ -1,40 +1,59 @@
-local map    = require "map"
-local player = require "player"
-local utils  = require "utils"
-local lume   = require "lib.rxi.lume"
-local magic  = require "magic"
+local map        = require "map"
+local player     = require "player"
+local utils      = require "utils"
+local lume       = require "lib.rxi.lume"
+local magic      = require "magic"
+
+local pixelcode  = [[
+    uniform vec2 playerPos;
+    uniform vec2 playerDir;
+    uniform vec2 camPlane;
+    uniform sampler2D floorTex;
+    //uniform sampler2D ceilTex;
+
+    vec4 effect(vec4 color, Image tex, vec2 texture_coords, vec2 screen_coords)
+    {
+      // raycasting floor & ceiling, ignore texture_coords & screen_coords
+      float rayDirX0 = playerDir.x - camPlane.x;
+      float rayDirY0 = playerDir.y - camPlane.y;
+      float rayDirX1 = playerDir.x + camPlane.x;
+      float rayDirY1 = playerDir.y + camPlane.y;
+      float p = love_PixelCoord.y - love_ScreenSize.y / 2.0;
+      float posZ = 0.5 * love_ScreenSize.y;
+      float rowDistance = posZ / p;
+
+      float stepX = rowDistance * (rayDirX1 - rayDirX0) / love_ScreenSize.x;
+      float stepY = rowDistance * (rayDirY1 - rayDirY0) / love_ScreenSize.x;
+      float floorX = playerPos.x + rowDistance * rayDirX0 + stepX * love_PixelCoord.x;
+      float floorY = playerPos.y + rowDistance * rayDirY0 + stepY * love_PixelCoord.x;
+      // Sample the floor texture with the calculated coordinates
+      vec2 floorTexCoord = vec2(floorX - floor(floorX), floorY - floor(floorY));
+      vec4 floorColor = Texel(floorTex, floorTexCoord);
+
+      // Apply some distance shading
+      float brightness = clamp(1.0 / (rowDistance * rowDistance) * 0.8 + 0.3, 0.0, 1.0);
+      return floorColor * brightness;
+   }
+]]
+
+local vertexcode = [[
+    vec4 position(mat4 transform_projection, vec4 vertex_position)
+    {
+        return transform_projection * vertex_position;
+    }
+]]
+
 
 function love.load()
-  --local spriteCache = imageCache:load("assets/sprites")
-
   Map = map:load("level-1")
 
   Player = player:new(Map.playerStartCell[1] + 0.5, Map.playerStartCell[2] + 0.5)
   Player:rotate(Map.playerStartDir * 90)
 
-  FloorImageData = love.image.newImageData("assets/tilesets/dungeon/floor_1.png")
-  CeilImageData = love.image.newImageData("assets/tilesets/dungeon/ceil_1.png")
-  -- extract the floor texture from the image data as a 32x32 array of rgb values
-  FloorRawData = {}
-  for y = 0, FloorImageData:getHeight() - 1 do
-    FloorRawData[y] = {}
-    for x = 0, FloorImageData:getWidth() - 1 do
-      local r, g, b, a = FloorImageData:getPixel(x, y)
-      FloorRawData[y][x] = { r, g, b, a }
-    end
-  end
-
-  -- extract the ceil texture from the image data as a 32x32 array of rgb values
-  CeilRawData = {}
-  for y = 0, CeilImageData:getHeight() - 1 do
-    CeilRawData[y] = {}
-    for x = 0, CeilImageData:getWidth() - 1 do
-      local r, g, b, a = CeilImageData:getPixel(x, y)
-      CeilRawData[y][x] = { r, g, b, a }
-    end
-  end
-
-  BGImageData = love.image.newImageData(love.graphics.getWidth(), love.graphics.getHeight())
+  FCShader = love.graphics.newShader(pixelcode, vertexcode)
+  FloorImage = love.graphics.newImage("assets/tilesets/dungeon/floor_1.png")
+  FloorImage:setFilter("nearest", "nearest")
+  --CeilImage = love.graphics.newImage("assets/tilesets/dungeon/ceil_1.png")
 end
 
 function love.update()
@@ -104,51 +123,16 @@ function love.draw()
   local tileWidth = Map.tileSet.size.width
   local tileHeight = Map.tileSet.size.height
 
-  -- draw the floor using Y based raycasting, scan the screen from top to bottom
-  for y = 0, love.graphics.getHeight() - 1 do
-    -- rayDir for leftmost ray (x = 0) and rightmost ray (x = w)
-    local rayDirX0 = Player.facing.x - Player.camPlane.x
-    local rayDirY0 = Player.facing.y - Player.camPlane.y
-    local rayDirX1 = Player.facing.x + Player.camPlane.x
-    local rayDirY1 = Player.facing.y + Player.camPlane.y
+  FCShader:send("playerPos", { Player.pos.x, Player.pos.y })
+  FCShader:send("playerDir", { Player.facing.x, Player.facing.y })
+  FCShader:send("camPlane", { Player.camPlane.x, Player.camPlane.y })
+  FCShader:send("floorTex", FloorImage)
+  --FCShader:send("ceilTex", CeilImage)
 
-    -- Current y position compared to the center of the screen (the horizon)
-    local p = y - love.graphics.getHeight() / 2
-
-    -- Vertical position of the camera
-    local posZ = 0.5 * love.graphics.getHeight()
-
-    -- Horizontal distance from the camera to the floor for the current row
-    local rowDistance = posZ / p
-    local light = lume.clamp(1 / (rowDistance * rowDistance), 0, 1)
-    light = light * 0.93 + 0.03 -- make it brighter
-
-    local floorStepX = rowDistance * (rayDirX1 - rayDirX0) / love.graphics.getWidth()
-    local floorStepY = rowDistance * (rayDirY1 - rayDirY0) / love.graphics.getWidth()
-
-    local floorX = Player.pos.x + rowDistance * rayDirX0
-    local floorY = Player.pos.y + rowDistance * rayDirY0
-
-    for x = 0, love.graphics.getWidth() - 1 do
-      -- Get the texture coordinates for the floor texture
-      local tx = tileWidth * utils.frac(floorX)
-      local ty = tileHeight * utils.frac(floorY)
-
-      floorX = floorX + floorStepX
-      floorY = floorY + floorStepY
-
-      if tx > 0 and tx < tileWidth and ty > 0 and ty < tileHeight then
-        local pixF = FloorRawData[math.floor(ty)][math.floor(tx)]
-        local pixC = CeilRawData[math.floor(ty)][math.floor(tx)]
-        BGImageData:setPixel(x, y, pixF[1] * light, pixF[2] * light, pixF[3] * light, 1)
-        BGImageData:setPixel(x, love.graphics.getHeight() - y - 1, pixC[1] * light, pixC[2] * light, pixC[3] * light, 1)
-      end
-    end
-  end
-
-  -- draw the floor texture
-  BGImage = love.graphics.newImage(BGImageData)
-  love.graphics.draw(BGImage, 0, 0, 0)
+  love.graphics.setShader(FCShader)
+  love.graphics.setColor(1, 1, 1)
+  love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
+  love.graphics.setShader()
 
   local zbuffer = {}
   -- draw walls using raycasting
