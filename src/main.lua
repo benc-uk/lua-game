@@ -12,16 +12,29 @@ function love.load()
   Player = player:new(Map.playerStartCell[1] + 0.5, Map.playerStartCell[2] + 0.5)
   Player:rotate(Map.playerStartDir * 90)
 
-  Floor = utils.gradientMesh("vertical",
-    { 0, 0, 0 },
-    { 0.12, 0.12, 0.15 },
-    { 0.4, 0.4, 0.48 }
-  )
+  FloorImageData = love.image.newImageData("assets/tilesets/dungeon/floor_1.png")
+  CeilImageData = love.image.newImageData("assets/tilesets/dungeon/ceil_1.png")
+  -- extract the floor texture from the image data as a 32x32 array of rgb values
+  FloorRawData = {}
+  for y = 0, FloorImageData:getHeight() - 1 do
+    FloorRawData[y] = {}
+    for x = 0, FloorImageData:getWidth() - 1 do
+      local r, g, b, a = FloorImageData:getPixel(x, y)
+      FloorRawData[y][x] = { r, g, b, a }
+    end
+  end
 
-  Sky = utils.gradientMesh("vertical",
-    { 0.48, 0.4, 0.4 },
-    { 0, 0, 0 }
-  )
+  -- extract the ceil texture from the image data as a 32x32 array of rgb values
+  CeilRawData = {}
+  for y = 0, CeilImageData:getHeight() - 1 do
+    CeilRawData[y] = {}
+    for x = 0, CeilImageData:getWidth() - 1 do
+      local r, g, b, a = CeilImageData:getPixel(x, y)
+      CeilRawData[y][x] = { r, g, b, a }
+    end
+  end
+
+  BGImageData = love.image.newImageData(love.graphics.getWidth(), love.graphics.getHeight())
 end
 
 function love.update()
@@ -88,14 +101,54 @@ function love.draw()
   love.graphics.setColor(1, 1, 1)
   love.graphics.clear()
 
-  -- draw floor
-  love.graphics.draw(Floor, 0, love.graphics.getHeight() / 2, 0, love.graphics.getWidth(), love.graphics.getHeight() / 2)
-  -- draw sky
-  love.graphics.draw(Sky, 0, 0, 0, love.graphics.getWidth(), love.graphics.getHeight() / 2)
-
-
   local tileWidth = Map.tileSet.size.width
   local tileHeight = Map.tileSet.size.height
+
+  -- draw the floor using Y based raycasting, scan the screen from top to bottom
+  for y = 0, love.graphics.getHeight() - 1 do
+    -- rayDir for leftmost ray (x = 0) and rightmost ray (x = w)
+    local rayDirX0 = Player.facing.x - Player.camPlane.x
+    local rayDirY0 = Player.facing.y - Player.camPlane.y
+    local rayDirX1 = Player.facing.x + Player.camPlane.x
+    local rayDirY1 = Player.facing.y + Player.camPlane.y
+
+    -- Current y position compared to the center of the screen (the horizon)
+    local p = y - love.graphics.getHeight() / 2
+
+    -- Vertical position of the camera
+    local posZ = 0.5 * love.graphics.getHeight()
+
+    -- Horizontal distance from the camera to the floor for the current row
+    local rowDistance = posZ / p
+    local light = lume.clamp(1 / (rowDistance * rowDistance), 0, 1)
+    light = light * 0.93 + 0.03 -- make it brighter
+
+    local floorStepX = rowDistance * (rayDirX1 - rayDirX0) / love.graphics.getWidth()
+    local floorStepY = rowDistance * (rayDirY1 - rayDirY0) / love.graphics.getWidth()
+
+    local floorX = Player.pos.x + rowDistance * rayDirX0
+    local floorY = Player.pos.y + rowDistance * rayDirY0
+
+    for x = 0, love.graphics.getWidth() - 1 do
+      -- Get the texture coordinates for the floor texture
+      local tx = tileWidth * utils.frac(floorX)
+      local ty = tileHeight * utils.frac(floorY)
+
+      floorX = floorX + floorStepX
+      floorY = floorY + floorStepY
+
+      if tx > 0 and tx < tileWidth and ty > 0 and ty < tileHeight then
+        local pixF = FloorRawData[math.floor(ty)][math.floor(tx)]
+        local pixC = CeilRawData[math.floor(ty)][math.floor(tx)]
+        BGImageData:setPixel(x, y, pixF[1] * light, pixF[2] * light, pixF[3] * light, 1)
+        BGImageData:setPixel(x, love.graphics.getHeight() - y - 1, pixC[1] * light, pixC[2] * light, pixC[3] * light, 1)
+      end
+    end
+  end
+
+  -- draw the floor texture
+  BGImage = love.graphics.newImage(BGImageData)
+  love.graphics.draw(BGImage, 0, 0, 0)
 
   local zbuffer = {}
   -- draw walls using raycasting
@@ -112,17 +165,10 @@ function love.draw()
       return false
     end)
 
-    -- seed deterministically and randonly pick texture based on the map cell
-    local cell = Map:get(hit.mapX, hit.mapY)
-    if cell and cell.isWall then
-      -- pick a random texture based on the map cell
-      math.randomseed(hit.mapX * 108 + hit.mapY)
-    end
-    -- pick a random wall texture
-
-    local wallTexture = Map.tileSet.images["wall_" .. math.random(1, 3)]
-
     if hit.dist > 0 then
+      math.randomseed(hit.mapX + hit.mapY)
+      local wallTexture = Map.tileSet.images["wall_" .. math.random(1, 3)]
+
       zbuffer[screenX] = hit.dist
 
       -- Correct the distance to the wall for the fish-eye effect

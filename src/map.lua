@@ -80,7 +80,6 @@ function map:load(mapName)
   m.tileSetName = mapData.tileset
   m.width = mapData.width
   m.height = mapData.height
-  print(mapData.playerStartCell[1], mapData.playerStartCell[2])
   m.playerStartCell = { mapData.playerStartCell[1], mapData.playerStartCell[2] }
   m.playerStartDir = mapData.playerStartDir or 0
 

@@ -62,9 +62,8 @@ function sprite:draw(camPos, camDir, camPlane, zbuffer)
   local screenY = halfScreenHeight - height / 2 + moveDown
 
   -- Compute brightness factor
-  local bright = 1 - (spritePos:length() / 7)
+  local bright = 1 - (spritePos:length() / 5)
   bright = math.max(0.1, math.min(1, bright))
-  love.graphics.setColor(bright, bright, bright, 1)
 
   -- Draw sprite by vertical slices
   local imageWidth = self.image:getWidth()
@@ -72,7 +71,7 @@ function sprite:draw(camPos, camDir, camPlane, zbuffer)
 
   local a = 1
   if self.alpha < 1 then a = self.alpha * bright end
-  love.graphics.setColor(1, 1, 1, a)
+  love.graphics.setColor(bright, bright, bright, a)
 
   for x = startX, endX do
     -- Calculate which slice of the sprite texture to use
