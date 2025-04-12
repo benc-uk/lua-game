@@ -142,7 +142,7 @@ function love.mousemoved(x)
 end
 
 function love.draw()
-  love.graphics.setColor(1, 1, 1)
+  love.graphics.setColor(0, 0, 0, 1)
   love.graphics.clear()
 
   local tileWidth = Map.tileSet.size.width
@@ -156,7 +156,7 @@ function love.draw()
   FCShader:send("ceilTex", CeilImage)
 
   love.graphics.setShader(FCShader)
-  love.graphics.setColor(1, 1, 1)
+  love.graphics.setColor(0, 0, 0, 1)
   love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
   love.graphics.setShader()
 
