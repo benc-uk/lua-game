@@ -56,7 +56,7 @@ local pixelcode  = [[
 
       // Apply distance-based shading for realism
       float brightness = clamp(1.0 / (rowDistance * rowDistance) * 0.8 + 0.3, 0.0, 1.0);
-      return vec4(texColor.rgb, 1) * brightness;
+      return vec4(texColor.rgb * brightness, 1);
     }
 ]]
 
