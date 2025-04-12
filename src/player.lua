@@ -23,6 +23,7 @@ function player:new(x, y)
 end
 
 function player:rotate(a)
+  print("rotate", a, self.angle)
   self.angle = self.angle + a
   if self.angle >= 360 then
     self.angle = self.angle - 360

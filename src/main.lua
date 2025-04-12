@@ -1,19 +1,20 @@
-local map        = require "map"
-local player     = require "player"
-local utils      = require "utils"
-local lume       = require "lib.rxi.lume"
-local imageCache = require "image-cache"
-local magic      = require "magic"
+local map    = require "map"
+local player = require "player"
+local utils  = require "utils"
+local lume   = require "lib.rxi.lume"
+local magic  = require "magic"
 
 function love.load()
   --local spriteCache = imageCache:load("assets/sprites")
 
   Map = map:load("level-1")
 
-  Player = player:new(2.5, 2.5)
+  Player = player:new(Map.playerStartCell[1] + 0.5, Map.playerStartCell[2] + 0.5)
+  Player:rotate(Map.playerStartDir * 90)
 
   Floor = utils.gradientMesh("vertical",
     { 0, 0, 0 },
+    { 0.12, 0.12, 0.15 },
     { 0.4, 0.4, 0.48 }
   )
 
@@ -24,17 +25,17 @@ function love.load()
 end
 
 function love.update()
-  if love.keyboard.isDown("left") then
+  if love.keyboard.isDown("left") or love.keyboard.isDown("a") then
     Player:rotate(-2)
-  elseif love.keyboard.isDown("right") then
+  elseif love.keyboard.isDown("right") or love.keyboard.isDown("d") then
     Player:rotate(2)
   end
 
   local movingKey = false
-  if love.keyboard.isDown("up") then
+  if love.keyboard.isDown("up") or love.keyboard.isDown("w") then
     Player:accel()
     movingKey = true
-  elseif love.keyboard.isDown("down") then
+  elseif love.keyboard.isDown("down") or love.keyboard.isDown("s") then
     Player:decel()
     movingKey = true
   end
@@ -53,6 +54,36 @@ function love.update()
   end
 end
 
+function love.mousepressed(x, y, button)
+  if button == 1 then
+    if love.mouse.isGrabbed() then
+      love.mouse.setGrabbed(false)
+      love.mouse.setVisible(true)
+      return
+    end
+
+    love.mouse.setGrabbed(true)
+    love.mouse.setVisible(false)
+  end
+end
+
+function love.mousemoved(x, y, dx, dy, istouch)
+  if love.mouse.isGrabbed() then
+    -- Calculate the angle to turn based on mouse movement
+    local sensitivity = 0.1
+    local centerXDiff = love.graphics.getWidth() / 2 - x
+    local angle = -centerXDiff * sensitivity
+
+    -- Rotate the player based on mouse movement
+    Player:rotate(angle)
+
+    -- Reset mouse position to the center of the window
+    local centerX = love.graphics.getWidth() / 2
+    local centerY = love.graphics.getHeight() / 2
+    love.mouse.setPosition(centerX, centerY)
+  end
+end
+
 function love.draw()
   love.graphics.setColor(1, 1, 1)
   love.graphics.clear()
@@ -66,6 +97,7 @@ function love.draw()
   local tileWidth = Map.tileSet.size.width
   local tileHeight = Map.tileSet.size.height
 
+  local zbuffer = {}
   -- draw walls using raycasting
   for screenX = 0, love.graphics.getWidth() do
     -- Create a ray from the player position to the screen position
@@ -80,8 +112,18 @@ function love.draw()
       return false
     end)
 
+    -- seed deterministically and randonly pick texture based on the map cell
+    local cell = Map:get(hit.mapX, hit.mapY)
+    if cell and cell.isWall then
+      -- pick a random texture based on the map cell
+      math.randomseed(hit.mapX * 108 + hit.mapY)
+    end
+    -- pick a random wall texture
+
+    local wallTexture = Map.tileSet.images["wall_" .. math.random(1, 3)]
+
     if hit.dist > 0 then
-      local wallTexture = Map.tileSet.images["wall_" .. hit.mapX % 3 + 1]
+      zbuffer[screenX] = hit.dist
 
       -- Correct the distance to the wall for the fish-eye effect
       local wallHeightDist = hit.dist * math.cos(math.atan2(ray.y, ray.x) - math.atan2(Player.facing.y, Player.facing.x))
@@ -120,11 +162,15 @@ function love.draw()
   love.graphics.setColor(1, 1, 1)
   love.graphics.print("FPS: " .. love.timer.getFPS(), love.graphics.getWidth() - 92, 3)
 
-  -- Draw all the sprites in the map
-  love.graphics.setColor(1, 1, 1)
+  -- Order the sprites by distance to the player
+  table.sort(Map.sprites, function(a, b)
+    return (a.pos - Player.pos):length() > (b.pos - Player.pos):length()
+  end)
+
+  -- Draw the sprites
   for s = 1, #Map.sprites do
     local sprite = Map.sprites[s]
-    sprite:draw(Player.pos, Player.facing, Player.camPlane)
+    sprite:draw(Player.pos, Player.facing, Player.camPlane, zbuffer)
   end
 end
 

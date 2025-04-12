@@ -8,6 +8,7 @@ local function newCell(x, y)
     y = y,
     isWall = false,
     item = nil,
+
   }
 end
 
@@ -50,14 +51,38 @@ function map:load(mapName)
       if dataValue == "a" then
         local s = sprite:new(cell.x + 0.5, cell.y + 0.5, "barrel")
         m.sprites[#m.sprites + 1] = s
+        s.scale = 0.5
+      end
+
+      if dataValue == "o" then
+        local s = sprite:new(cell.x + 0.5, cell.y + 0.5, "skeleton")
+        m.sprites[#m.sprites + 1] = s
+        s.scale = 0.9
+      end
+
+      if dataValue == "w" then
+        local s = sprite:new(cell.x + 0.5, cell.y + 0.5, "wiz")
+        m.sprites[#m.sprites + 1] = s
+        s.scale = 0.7
+      end
+
+      if dataValue == "s" then
+        local s = sprite:new(cell.x + 0.5, cell.y + 0.5, "spectre")
+        m.sprites[#m.sprites + 1] = s
+        s.scale = 0.7
+        s.alpha = 0.5
       end
     end
   end
+
 
   m.name = "Demo Dungeon"
   m.tileSetName = mapData.tileset
   m.width = mapData.width
   m.height = mapData.height
+  print(mapData.playerStartCell[1], mapData.playerStartCell[2])
+  m.playerStartCell = { mapData.playerStartCell[1], mapData.playerStartCell[2] }
+  m.playerStartDir = mapData.playerStartDir or 0
 
   m.tileSet = imageCache:load("assets/tilesets/" .. m.tileSetName)
 

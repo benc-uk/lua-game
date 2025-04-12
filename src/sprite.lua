@@ -11,7 +11,8 @@ function sprite:new(x, y, name)
     pos = vec2:new(x, y),
     name = name,
     image = spriteImgCache.images[name],
-    scale = 0.5,
+    scale = 1,
+    alpha = 1,
   }
 
   setmetatable(obj, self)
@@ -21,12 +22,12 @@ function sprite:new(x, y, name)
 end
 
 -- Draw the sprite on the screen projected on the 2D plane
-function sprite:draw(camPos, camDir, camPlane)
+function sprite:draw(camPos, camDir, camPlane, zbuffer)
   -- Calculate sprite position relative to camera
   local spritePos = self.pos - camPos
   local aspect = love.graphics.getWidth() / love.graphics.getHeight()
 
-  -- Transform sprite with the inverse camera matrix
+  -- Precompute inverse determinant and transformed sprite position
   local invDet = 1.0 / (camPlane.x * camDir.y - camDir.x * camPlane.y)
   local transX = invDet * (camDir.y * spritePos.x - camDir.x * spritePos.y)
   local transY = invDet * (-camPlane.y * spritePos.x + camPlane.x * spritePos.y)
@@ -34,34 +35,58 @@ function sprite:draw(camPos, camDir, camPlane)
   -- Don't draw sprites behind the camera!
   if transY <= 0 then return end
 
+  -- Precompute screen dimensions and scaling factors
+  local screenWidth = love.graphics.getWidth()
+  local screenHeight = love.graphics.getHeight()
+  local halfScreenWidth = screenWidth / 2
+  local halfScreenHeight = screenHeight / 2
+  local heightScale = aspect * magic.heightScale
+
   -- Calculate screen position
-  local screenX = (love.graphics.getWidth() / 2) * (1 + transX / transY)
+  local screenX = halfScreenWidth * (1 + transX / transY)
 
   -- Calculate sprite dimensions on screen
-  local height = math.abs(love.graphics.getHeight() / transY) * self.scale
+  local height = math.abs(screenHeight * (1 / transY)) * self.scale * heightScale
   local width = height -- Assuming square sprite
 
-  -- Correct for the aspect ratio of the screen
-  width = width * aspect * magic.heightScale
-  height = height * aspect * magic.heightScale
+  -- Calculate the visible range
+  local halfWidth = width / 2
+  local startX = math.max(0, math.floor(screenX - halfWidth))
+  local endX = math.min(screenWidth - 1, math.floor(screenX + halfWidth))
+
+  -- Skip if sprite is out of screen bounds
+  if startX > screenWidth or endX < 0 then return end
 
   -- Move the sprite down to place it on the ground
-  local moveDown = height * (1 / self.scale) * 0.5 - height * 0.5
-  -- The Y coordinate of the sprite on the screen
-  local screenY = (love.graphics.getHeight() / 2) - (height / 2) + moveDown
+  local moveDown = height * (1 / self.scale - 1) * 0.5
+  local screenY = halfScreenHeight - height / 2 + moveDown
 
-  local bright = 1 - (spritePos:length() / 7) -- Brightness based on distance
+  -- Compute brightness factor
+  local bright = 1 - (spritePos:length() / 7)
+  bright = math.max(0.1, math.min(1, bright))
+  love.graphics.setColor(bright, bright, bright, 1)
 
-  -- Finally! Draw the sprite
-  love.graphics.setColor(bright, bright, bright) -- Reset color to white
-  love.graphics.draw(
-    self.image,
-    screenX - width / 2,
-    screenY,
-    0,
-    width / self.image:getWidth(),
-    height / self.image:getHeight()
-  )
+  -- Draw sprite by vertical slices
+  local imageWidth = self.image:getWidth()
+  local imageHeight = self.image:getHeight()
+
+  local a = 1
+  if self.alpha < 1 then a = self.alpha * bright end
+  love.graphics.setColor(1, 1, 1, a)
+
+  for x = startX, endX do
+    -- Calculate which slice of the sprite texture to use
+    local texX = math.floor((x - (screenX - halfWidth)) / width * imageWidth)
+
+    -- Check if this vertical line is in front of the wall
+    if transY < zbuffer[x + 1] then
+      -- Create a quad for the vertical slice
+      local quad = love.graphics.newQuad(texX, 0, 1, imageHeight, imageWidth, imageHeight)
+
+      -- Draw the slice
+      love.graphics.draw(self.image, quad, x, screenY, 0, 1, height / imageHeight)
+    end
+  end
 end
 
 return sprite
