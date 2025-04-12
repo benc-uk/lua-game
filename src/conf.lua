@@ -19,6 +19,8 @@ function love.conf(conf)
   conf.window.icon = "assets/icons/main.png"
   conf.window.resizable = true
 
+  conf.window.fullscreentype = "exclusive"
+
   if IS_DEBUG then
     conf.window.x = 20
     conf.window.y = 40

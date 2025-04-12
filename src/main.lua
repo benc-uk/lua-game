@@ -1,3 +1,4 @@
+---@diagnostic disable: missing-fields
 local map        = require "map"
 local player     = require "player"
 local utils      = require "utils"
@@ -9,31 +10,55 @@ local pixelcode  = [[
     uniform vec2 playerDir;
     uniform vec2 camPlane;
     uniform sampler2D floorTex;
-    //uniform sampler2D ceilTex;
+    uniform sampler2D ceilTex;
+    uniform float heightScale;
 
     vec4 effect(vec4 color, Image tex, vec2 texture_coords, vec2 screen_coords)
     {
-      // raycasting floor & ceiling, ignore texture_coords & screen_coords
+      // Calculate ray directions for the left and right edges of the screen
       float rayDirX0 = playerDir.x - camPlane.x;
       float rayDirY0 = playerDir.y - camPlane.y;
       float rayDirX1 = playerDir.x + camPlane.x;
       float rayDirY1 = playerDir.y + camPlane.y;
+      float aspectRatio = love_ScreenSize.x / love_ScreenSize.y;
+
+      // Calculate the vertical position relative to the center of the screen
       float p = love_PixelCoord.y - love_ScreenSize.y / 2.0;
-      float posZ = 0.5 * love_ScreenSize.y;
-      float rowDistance = posZ / p;
 
-      float stepX = rowDistance * (rayDirX1 - rayDirX0) / love_ScreenSize.x;
-      float stepY = rowDistance * (rayDirY1 - rayDirY0) / love_ScreenSize.x;
-      float floorX = playerPos.x + rowDistance * rayDirX0 + stepX * love_PixelCoord.x;
-      float floorY = playerPos.y + rowDistance * rayDirY0 + stepY * love_PixelCoord.x;
-      // Sample the floor texture with the calculated coordinates
-      vec2 floorTexCoord = vec2(floorX - floor(floorX), floorY - floor(floorY));
-      vec4 floorColor = Texel(floorTex, floorTexCoord);
 
-      // Apply some distance shading
+      // Calculate the distance to the row being rendered
+      float posZ = 0.5 * love_ScreenSize.y; // Distance from the player to the projection plane
+
+      // Adjust the distance based on the height scale and aspect ratio
+      posZ *= heightScale * aspectRatio;
+      float rowDistance = posZ / abs(p);    // Use absolute value to handle both top and bottom halves
+
+      // Interpolate the ray direction based on the horizontal screen position
+      float screenPosX = love_PixelCoord.x / love_ScreenSize.x;
+      float rayDirX = rayDirX0 + screenPosX * (rayDirX1 - rayDirX0);
+      float rayDirY = rayDirY0 + screenPosX * (rayDirY1 - rayDirY0);
+
+      // Calculate the world position of the floor/ceiling at this distance
+      float floorX = playerPos.x + rowDistance * rayDirX;
+      float floorY = playerPos.y + rowDistance * rayDirY;
+
+      // Calculate texture coordinates
+      vec2 texCoord = vec2(floorX - floor(floorX), floorY - floor(floorY));
+      vec4 texColor;
+
+      // Determine whether to draw the ceiling or the floor
+      if (p < 0.0) {
+        // Top half: draw ceiling
+        texColor = texture2D(ceilTex, texCoord);
+      } else {
+        // Bottom half: draw floor
+        texColor = texture2D(floorTex, texCoord);
+      }
+
+      // Apply distance-based shading for realism
       float brightness = clamp(1.0 / (rowDistance * rowDistance) * 0.8 + 0.3, 0.0, 1.0);
-      return floorColor * brightness;
-   }
+      return texColor * brightness;
+    }
 ]]
 
 local vertexcode = [[
@@ -53,7 +78,8 @@ function love.load()
   FCShader = love.graphics.newShader(pixelcode, vertexcode)
   FloorImage = love.graphics.newImage("assets/tilesets/dungeon/floor_1.png")
   FloorImage:setFilter("nearest", "nearest")
-  --CeilImage = love.graphics.newImage("assets/tilesets/dungeon/ceil_1.png")
+  CeilImage = love.graphics.newImage("assets/tilesets/dungeon/ceil_1.png")
+  CeilImage:setFilter("nearest", "nearest")
 end
 
 function love.update()
@@ -126,8 +152,9 @@ function love.draw()
   FCShader:send("playerPos", { Player.pos.x, Player.pos.y })
   FCShader:send("playerDir", { Player.facing.x, Player.facing.y })
   FCShader:send("camPlane", { Player.camPlane.x, Player.camPlane.y })
+  FCShader:send("heightScale", magic.heightScale)
   FCShader:send("floorTex", FloorImage)
-  --FCShader:send("ceilTex", CeilImage)
+  FCShader:send("ceilTex", CeilImage)
 
   love.graphics.setShader(FCShader)
   love.graphics.setColor(1, 1, 1)
