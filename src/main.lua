@@ -25,7 +25,6 @@ local pixelcode  = [[
       // Calculate the vertical position relative to the center of the screen
       float p = love_PixelCoord.y - love_ScreenSize.y / 2.0;
 
-
       // Calculate the distance to the row being rendered
       float posZ = 0.5 * love_ScreenSize.y; // Distance from the player to the projection plane
 
@@ -57,7 +56,7 @@ local pixelcode  = [[
 
       // Apply distance-based shading for realism
       float brightness = clamp(1.0 / (rowDistance * rowDistance) * 0.8 + 0.3, 0.0, 1.0);
-      return texColor * brightness;
+      return vec4(texColor.rgb, 1) * brightness;
     }
 ]]
 
