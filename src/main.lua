@@ -67,7 +67,7 @@ function love.update()
   end
 end
 
-function love.mousepressed(x, y, button)
+function love.mousepressed(_, _, button)
   if button == 1 then
     if love.mouse.isGrabbed() then
       love.mouse.setGrabbed(false)
@@ -80,7 +80,7 @@ function love.mousepressed(x, y, button)
   end
 end
 
-function love.mousemoved(x, y, dx, dy, istouch)
+function love.mousemoved(x)
   if love.mouse.isGrabbed() then
     -- Calculate the angle to turn based on mouse movement
     local sensitivity = 0.1
