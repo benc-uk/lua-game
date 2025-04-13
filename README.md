@@ -2,7 +2,7 @@
 
 A first person game made with [Love2D](https://love2d.org/)
 
-![screen2](./docs/screen2.png)
+![screen3](./docs/screen3.png)
 
 ## Notes
 
