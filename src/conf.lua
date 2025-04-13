@@ -17,9 +17,8 @@ function love.conf(conf)
   conf.window.height = 768
   conf.window.title = "Lua Dungeon"
   conf.window.icon = "assets/icons/main.png"
-  conf.window.resizable = true
-
-  conf.window.fullscreentype = "exclusive"
+  conf.window.resizable = false
+  conf.window.fullscreentype = "desktop"
 
   if IS_DEBUG then
     conf.window.x = 20

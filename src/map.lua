@@ -8,7 +8,6 @@ local function newCell(x, y)
     y = y,
     isWall = false,
     item = nil,
-
   }
 end
 
@@ -74,7 +73,6 @@ function map:load(mapName)
       end
     end
   end
-
 
   m.name = "Demo Dungeon"
   m.tileSetName = mapData.tileset

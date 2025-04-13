@@ -129,7 +129,7 @@ end
 -- Cast a ray from the current position in the given direction and return the hit information
 -- Pass in a function that checks for a hits
 function vec2:castRay(dir, hitFunc)
-  -- current map position
+  -- current grid position
   local gridPos = { x = math.floor(self.x), y = math.floor(self.y) }
 
   -- length of ray from current position to next x or y-side
@@ -164,7 +164,7 @@ function vec2:castRay(dir, hitFunc)
   local side
   local steps = 0
   while not hit and steps < 16 do
-    -- jump to next map square, either in x-direction, or in y-direction
+    -- jump to next grid square, either in x-direction, or in y-direction
     if sideDistX < sideDistY then
       sideDistX = sideDistX + deltaDistX
       gridPos.x = gridPos.x + stepX
@@ -191,7 +191,7 @@ function vec2:castRay(dir, hitFunc)
   -- world position of the hit
   local worldPos = vec2:new(self.x + dir.x * hitDist, self.y + dir.y * hitDist)
 
-  return { dist = hitDist, worldPos = worldPos, side = side, mapX = gridPos.x, mapY = gridPos.y }
+  return { dist = hitDist, worldPos = worldPos, side = side, cellX = gridPos.x, cellY = gridPos.y }
 end
 
 return vec2

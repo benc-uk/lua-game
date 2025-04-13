@@ -1,113 +1,46 @@
----@diagnostic disable: missing-fields
-local map        = require "map"
-local player     = require "player"
-local utils      = require "utils"
-local lume       = require "lib.rxi.lume"
-local magic      = require "magic"
+local mapLib    = require "map"
+local playerLib = require "player"
+local render    = require "render"
 
-local pixelcode  = [[
-    uniform vec2 playerPos;
-    uniform vec2 playerDir;
-    uniform vec2 camPlane;
-    uniform sampler2D floorTex;
-    uniform sampler2D ceilTex;
-    uniform float heightScale;
-
-    vec4 effect(vec4 color, Image tex, vec2 texture_coords, vec2 screen_coords)
-    {
-      // Calculate ray directions for the left and right edges of the screen
-      float rayDirX0 = playerDir.x - camPlane.x;
-      float rayDirY0 = playerDir.y - camPlane.y;
-      float rayDirX1 = playerDir.x + camPlane.x;
-      float rayDirY1 = playerDir.y + camPlane.y;
-      float aspectRatio = love_ScreenSize.x / love_ScreenSize.y;
-
-      // Calculate the vertical position relative to the center of the screen
-      float p = love_PixelCoord.y - love_ScreenSize.y / 2.0;
-
-      // Calculate the distance to the row being rendered
-      float posZ = 0.5 * love_ScreenSize.y; // Distance from the player to the projection plane
-
-      // Adjust the distance based on the height scale and aspect ratio
-      posZ *= heightScale * aspectRatio;
-      float rowDistance = posZ / abs(p);    // Use absolute value to handle both top and bottom halves
-
-      // Interpolate the ray direction based on the horizontal screen position
-      float screenPosX = love_PixelCoord.x / love_ScreenSize.x;
-      float rayDirX = rayDirX0 + screenPosX * (rayDirX1 - rayDirX0);
-      float rayDirY = rayDirY0 + screenPosX * (rayDirY1 - rayDirY0);
-
-      // Calculate the world position of the floor/ceiling at this distance
-      float floorX = playerPos.x + rowDistance * rayDirX;
-      float floorY = playerPos.y + rowDistance * rayDirY;
-
-      // Calculate texture coordinates
-      vec2 texCoord = vec2(floorX - floor(floorX), floorY - floor(floorY));
-      vec4 texColor;
-
-      // Determine whether to draw the ceiling or the floor
-      if (p < 0.0) {
-        // Top half: draw ceiling
-        texColor = texture2D(ceilTex, texCoord);
-      } else {
-        // Bottom half: draw floor
-        texColor = texture2D(floorTex, texCoord);
-      }
-
-      // Apply distance-based shading for realism
-      float brightness = clamp(1.0 / (rowDistance * rowDistance) * 0.95 + 0.05, 0.0, 1.0);
-      return vec4(texColor.rgb * brightness, 1);
-    }
-]]
-
-local vertexcode = [[
-    vec4 position(mat4 transform_projection, vec4 vertex_position)
-    {
-        return transform_projection * vertex_position;
-    }
-]]
-
+local map       = {}
+local player    = {}
 
 function love.load()
-  Map = map:load("level-1")
+  map = mapLib:load("level-1")
 
-  Player = player:new(Map.playerStartCell[1] + 0.5, Map.playerStartCell[2] + 0.5)
-  Player:rotate(Map.playerStartDir * 90)
+  player = playerLib:new(map.playerStartCell[1] + 0.5, map.playerStartCell[2] + 0.5)
+  player:rotate(map.playerStartDir * 90)
 
-  FCShader = love.graphics.newShader(pixelcode, vertexcode)
-  FloorImage = love.graphics.newImage("assets/tilesets/dungeon/floor_1.png")
-  FloorImage:setFilter("nearest", "nearest")
-  CeilImage = love.graphics.newImage("assets/tilesets/dungeon/ceil_1.png")
-  CeilImage:setFilter("nearest", "nearest")
+  render.init(map.tileSetName, map.tileSet.size.width)
 end
 
 function love.update()
   if love.keyboard.isDown("left") or love.keyboard.isDown("a") then
-    Player:rotate(-2)
+    player:rotate(-2)
   elseif love.keyboard.isDown("right") or love.keyboard.isDown("d") then
-    Player:rotate(2)
+    player:rotate(2)
   end
 
   local movingKey = false
   if love.keyboard.isDown("up") or love.keyboard.isDown("w") then
-    Player:accel()
+    player:accel()
     movingKey = true
   elseif love.keyboard.isDown("down") or love.keyboard.isDown("s") then
-    Player:decel()
+    player:decel()
     movingKey = true
   end
 
   if not movingKey then
-    Player:comeToStop()
+    player:comeToStop()
   end
 
-  Player:move(love.timer.getDelta())
+  player:move(love.timer.getDelta())
 
   -- check inside a wall
-  if Map:get(Player.pos.x, Player.pos.y).isWall then
+  if map:get(player.pos.x, player.pos.y).isWall then
     -- Move back to the last position
-    Player.pos = Player.pos - Player.facing * Player.speed * love.timer.getDelta()
-    Player.speed = 0
+    player.pos = player.pos - player.facing * player.speed * love.timer.getDelta()
+    player.speed = 0
   end
 end
 
@@ -132,7 +65,7 @@ function love.mousemoved(x)
     local angle = -centerXDiff * sensitivity
 
     -- Rotate the player based on mouse movement
-    Player:rotate(angle)
+    player:rotate(angle)
 
     -- Reset mouse position to the center of the window
     local centerX = love.graphics.getWidth() / 2
@@ -145,70 +78,11 @@ function love.draw()
   love.graphics.setColor(0, 0, 0, 1)
   love.graphics.clear()
 
-  local tileWidth = Map.tileSet.size.width
-  local tileHeight = Map.tileSet.size.height
+  render.floorCeil(player)
 
-  FCShader:send("playerPos", { Player.pos.x, Player.pos.y })
-  FCShader:send("playerDir", { Player.facing.x, Player.facing.y })
-  FCShader:send("camPlane", { Player.camPlane.x, Player.camPlane.y })
-  FCShader:send("heightScale", magic.heightScale)
-  FCShader:send("floorTex", FloorImage)
-  FCShader:send("ceilTex", CeilImage)
+  local zbuffer = render.walls(player, map)
 
-  love.graphics.setShader(FCShader)
-  love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
-  love.graphics.setShader()
-
-  local zbuffer = {}
-  -- draw walls using raycasting
-  for screenX = 0, love.graphics.getWidth() do
-    -- Create a ray from the player position to the screen position
-    local ray = Player:getRay(screenX)
-
-    -- Cast the ray from player pos, out to find the first wall hit
-    local hit = Player.pos:castRay(ray, function(x, y)
-      local cell = Map:get(x, y)
-      if cell and cell.isWall then
-        return true
-      end
-      return false
-    end)
-
-    if hit.dist > 0 then
-      math.randomseed(hit.mapX + hit.mapY)
-      local wallTexture = Map.tileSet.images["wall_" .. math.random(1, 3)]
-
-      zbuffer[screenX] = hit.dist
-
-      -- Correct the distance to the wall for the fish-eye effect
-      local wallHeightDist = hit.dist * math.cos(math.atan2(ray.y, ray.x) - math.atan2(Player.facing.y, Player.facing.x))
-
-      -- The height of the wall on the screen is inversely proportional to the distance
-      local wallHeight = love.graphics.getHeight() / wallHeightDist
-      -- Correct for the aspect ratio of the screen
-      wallHeight = wallHeight * (love.graphics.getWidth() / love.graphics.getHeight()) * magic.heightScale
-
-      local wallY = (love.graphics.getHeight() - wallHeight) / 2
-
-      -- light falls off with distance inverse square law and should be clamped to 0 - 1
-      local light = lume.clamp(1 / (hit.dist * hit.dist), 0, 1)
-      light = light * 0.93 + 0.03 -- make it brighter
-
-      -- texture mapping, get fraction of the world pos to use as the u coordinate of the texture
-      local texU
-      if hit.side == 0 then
-        texU = utils.frac(hit.worldPos.y) -- vertical wall
-      else
-        texU = utils.frac(hit.worldPos.x) -- horizontal wall
-      end
-
-      -- One pixel vertical slice of the texture
-      local wallSlice = love.graphics.newQuad(texU * tileWidth, 0, 1,
-        tileHeight, tileWidth, tileHeight)
-      love.graphics.setColor(light, light, light)
-      love.graphics.draw(wallTexture, wallSlice, screenX, wallY, 0, 1, wallHeight / tileHeight, 0, 0)
-    end
-  end
+  render.sprites(player, map, zbuffer)
 
   -- Show the FPS
   love.graphics.setFont(love.graphics.newFont(22))
@@ -216,17 +90,6 @@ function love.draw()
   love.graphics.print("FPS: " .. love.timer.getFPS(), love.graphics.getWidth() - 90, 5)
   love.graphics.setColor(1, 1, 1)
   love.graphics.print("FPS: " .. love.timer.getFPS(), love.graphics.getWidth() - 92, 3)
-
-  -- Order the sprites by distance to the player
-  table.sort(Map.sprites, function(a, b)
-    return (a.pos - Player.pos):length() > (b.pos - Player.pos):length()
-  end)
-
-  -- Draw the sprites
-  for s = 1, #Map.sprites do
-    local sprite = Map.sprites[s]
-    sprite:draw(Player.pos, Player.facing, Player.camPlane, zbuffer)
-  end
 end
 
 function love.keypressed(key)
@@ -235,51 +98,10 @@ function love.keypressed(key)
   end
 
   if key == "f" then
-    if Map.tileSet.filterMode == "nearest" then
-      Map.tileSet:setFilter("linear")
+    if love.window.getFullscreen() then
+      love.window.setFullscreen(false)
     else
-      Map.tileSet:setFilter("nearest")
+      love.window.setFullscreen(true, "exclusive")
     end
   end
 end
-
--- local function overlay()
--- love.graphics.setColor(0, 1, 0)
--- love.graphics.setLineWidth(1)
--- love.graphics.line(love.graphics.getWidth() / 2, 0, love.graphics.getWidth() / 2, love.graphics.getHeight())
--- love.graphics.line(0, love.graphics.getHeight() / 2, love.graphics.getWidth(), love.graphics.getHeight() / 2)
-
---   local image = Map.tiles["wall_1"]
---   local tileWidth = image:getWidth()
---   local tileHeight = image:getHeight()
-
---   -- Draw the map
---   love.graphics.scale(0.75, 0.75)
---   love.graphics.setColor(1, 1, 1, 0.6)
-
---   for i = 1, Map.height do
---     for j = 1, Map.width do
---       local cell = Map[i][j]
---       if cell.isWall then
---         local x = i * tileWidth
---         local y = j * tileHeight
---         love.graphics.draw(image, x, y)
---       end
---     end
---   end
-
---   -- Draw red circle at player position
---   love.graphics.setColor(1, 0, 0)
---   love.graphics.circle("fill", Player.pos.x * tileWidth, Player.pos.y * tileHeight, 5)
-
---   -- Draw a line in the direction the player is facing
---   love.graphics.setColor(0, 1, 0)
---   love.graphics.setLineWidth(2)
---   love.graphics.line(
---     Player.pos.x * tileWidth,
---     Player.pos.y * tileHeight,
---     (Player.pos.x + Player.facing.x) * tileWidth,
---     (Player.pos.y + Player.facing.y) * tileHeight
---   )
---   love.graphics.scale(1.3333, 1.3333)
--- end
