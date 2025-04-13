@@ -16,7 +16,7 @@ I don't know if I'll keep this as it often behaves strangely compared to the nat
 - Download love2d from https://love2d.org/
 - Either extract somewhere on your system or run the installer
 
-I supply a build script for Window only. I tried using love2d with WSL which is my normal dev environment and found it too slow.
+### Windows
 
 - Clone the repo (dhur!)
 - Open a Powershell session in the project root
@@ -26,6 +26,10 @@ I supply a build script for Window only. I tried using love2d with WSL which is 
 Alternatively clone & open the project is VSCode and hit `ctrl+shift+B` to run the build task
 
 The binary will be saved as `out.exe` in the dist directory, and should be runnable on any Windows system
+
+### Linux
+
+Kinda the same as above, but run `./tools/build-linux.sh` you can run the script with the defaults and it should be fine. Output Linux executable will be `./dist/out`
 
 ## Attributions
 

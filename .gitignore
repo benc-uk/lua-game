@@ -1,3 +1,4 @@
 dist/*.love
 dist/*.exe
 dist/web/
+dist/out
