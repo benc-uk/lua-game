@@ -55,7 +55,7 @@ local pixelcode  = [[
       }
 
       // Apply distance-based shading for realism
-      float brightness = clamp(1.0 / (rowDistance * rowDistance) * 0.8 + 0.3, 0.0, 1.0);
+      float brightness = clamp(1.0 / (rowDistance * rowDistance) * 0.95 + 0.05, 0.0, 1.0);
       return vec4(texColor.rgb * brightness, 1);
     }
 ]]
@@ -156,7 +156,6 @@ function love.draw()
   FCShader:send("ceilTex", CeilImage)
 
   love.graphics.setShader(FCShader)
-  love.graphics.setColor(0, 0, 0, 1)
   love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
   love.graphics.setShader()
 
