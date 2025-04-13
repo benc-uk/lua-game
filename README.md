@@ -6,11 +6,30 @@ A first person game made with [Love2D](https://love2d.org/)
 
 ## Notes
 
-## Installing
+A web/JS version is built using [love.js](https://github.com/Davidobot/love.js) and published here https://code.benco.io/lua-dungeon/  
+I don't know if I'll keep this as it often behaves strangely compared to the native version.
 
 ## Building
 
+### Pre-reqs
+
+- Download love2d from https://love2d.org/
+- Either extract somewhere on your system or run the installer
+
+I supply a build script for Window only. I tried using love2d with WSL which is my normal dev environment and found it too slow.
+
+- Clone the repo (dhur!)
+- Open a Powershell session in the project root
+- Run `tools\build-win.ps1 -lovePath <path to love.exe>`
+  - Change the path as required, if you used the windows installer it's probably `C:\Program Files\LOVE\love.exe`
+
+Alternatively clone & open the project is VSCode and hit `ctrl+shift+B` to run the build task
+
+The binary will be saved as `out.exe` in the dist directory, and should be runnable on any Windows system
+
 ## Attributions
+
+I used several sources of information and assets:
 
 - Graphics - https://opengameart.org/content/dungeon-crawl-32x32-tiles-supplemental
 - Raycasting - https://lodev.org/cgtutor/raycasting.html

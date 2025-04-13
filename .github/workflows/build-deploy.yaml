@@ -20,49 +20,49 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  test-lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+  # test-lint:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - name: Luacheck linter
-        uses: lunarmodules/luacheck@v1
-        with:
-          args: ./src/*.lua
+  #     - name: Luacheck linter
+  #       uses: lunarmodules/luacheck@v1
+  #       with:
+  #         args: ./src/*.lua
 
-  deploy-web:
-    needs: [test-lint]
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+  # deploy-web:
+  #   needs: [test-lint]
+  #   environment:
+  #     name: github-pages
+  #     url: ${{ steps.deployment.outputs.page_url }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
+  #     - name: Setup Pages
+  #       uses: actions/configure-pages@v5
 
-      - name: Setup Node.js environment
-        uses: actions/setup-node@v4
+  #     - name: Setup Node.js environment
+  #       uses: actions/setup-node@v4
 
-      - name: Build using love.js
-        run: npx love.js ./src/ ./dist/web -c -t "Lua Dungeon Game"
+  #     - name: Build using love.js
+  #       run: npx love.js ./src/ ./dist/web -c -t "Lua Dungeon Game"
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: "./dist/web"
+  #     - name: Upload artifact
+  #       uses: actions/upload-pages-artifact@v3
+  #       with:
+  #         path: "./dist/web"
 
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+  #     - name: Deploy to GitHub Pages
+  #       id: deployment
+  #       uses: actions/deploy-pages@v4
 
   build-windows:
     runs-on: windows-latest
-    needs: [test-lint]
+    #needs: [test-lint]
     env:
-      LOVE_FOLDER: .\love
+      LOVE_FOLDER: ${{ github.workspace }}\love
     steps:
       - uses: actions/checkout@v4
 
@@ -70,6 +70,7 @@ jobs:
         run: |
           Invoke-WebRequest -Uri "https://github.com/love2d/love/releases/download/11.5/love-11.5-win64.zip" -OutFile "love-win64.zip"
           Expand-Archive -Path love-win64.zip -DestinationPath ${{ env.LOVE_FOLDER }} -Force
+          Get-ChildItem -Path ${{ env.LOVE_FOLDER }}
 
       - name: Run Windows build script
         run: |
