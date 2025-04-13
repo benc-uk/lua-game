@@ -3,17 +3,10 @@
 # Example: .\build-win.ps1 -srcPath "C:\MyGame" -outputPath "C:\MyGame\build"
 
 param (
-    [string]$srcPath,
-    [string]$outputPath
+    [string]$srcPath = "src",
+    [string]$outputPath = "dist",
+    [string]$lovePath = "C:\Program Files\LOVE\love.exe" # Uncomment to set a default path
 )
-
-# Find love.exe in PATH
-$lovePath = Get-Command love.exe -ErrorAction SilentlyContinue  
-if (-Not $lovePath) {
-    Write-Host "love.exe not found in PATH. Please ensure Love2D is installed and added to your PATH."
-    exit 1
-}
-echo "💾 Found love.exe in: $($lovePath.Path)"
 
 # Check if srcPath and outputPath are provided
 if (-Not $srcPath -or -Not $outputPath) {
@@ -47,7 +40,7 @@ Compress-Archive -Path $srcPath\* -DestinationPath $zipFileName -Force
 
 # Copy love.exe together with the .love file
 echo "🔨 Building executable: $exeFileName"
-Get-Content $lovePath.Path,$zipFileName -AsByteStream | Set-Content $exeFileName -AsByteStream -Force
+Get-Content $lovePath,$zipFileName -AsByteStream | Set-Content $exeFileName -AsByteStream -Force
 
 # Show the size of the executable in MB rounded to 2 decimal places
 $size = "{0:N2} MB" -f ((Get-Item $exeFileName).length / 1MB)
