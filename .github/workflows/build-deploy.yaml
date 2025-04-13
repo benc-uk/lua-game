@@ -35,11 +35,6 @@ jobs:
         with:
           args: ./src/*.lua
 
-      - name: Love actions for testing
-        uses: love-actions/love-actions-test@v1
-        with:
-          source-folder: ./src
-
   deploy-web:
     needs: [test-lint]
     environment:
@@ -68,50 +63,18 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-  package:
-    needs: [test-lint]
-    runs-on: ubuntu-latest
-    env:
-      OUTPUT_FOLDER: ./build
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build love package
-        uses: love-actions/love-actions-core@v1
-        with:
-          build-list: ./src/*
-          package-path: ${{ env.LOVE_PACKAGE_PATH }}
-
-      - name: Upload love package
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.LOVE_ARTIFACT_NAME }}
-          path: ${{ env.LOVE_PACKAGE_PATH }}
-
   build-windows:
     runs-on: windows-latest
-    needs: [package]
+    needs: [test-lint]
     env:
-      OUTPUT_FOLDER: ./build
+      LOVE_FOLDER: .\love
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download love package
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ env.LOVE_ARTIFACT_NAME }}
+      - name: Download & extract love2d
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/love2d/love/releases/download/11.5/love-11.5-win64.zip" -OutFile "love-win64.zip"
+          Expand-Archive -Path love-win64.zip -DestinationPath ${{ env.LOVE_FOLDER }} -Force
 
-      - name: Build Windows packages
-        id: build-packages
-        uses: love-actions/love-actions-windows@v1
-        with:
-          love-package: ${{ env.LOVE_PACKAGE_PATH }}
-          product-name: ${{ env.LOVE_PRODUCT_NAME }}
-          app-id: E62A5E2F-8F1D-42A9-B0D3-B7645A3F56B7
-          output-folder: ${{ env.OUTPUT_FOLDER }}
-
-      - name: Upload 64-bit artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Windows_x64
-          path: ./build/${{ env.LOVE_PRODUCT_NAME }}_x64.zip
+      - name: Run build script
+        run: tools\build-win.ps1 -lovePath ${{ env.LOVE_FOLDER }}
