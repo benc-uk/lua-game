@@ -1,0 +1,64 @@
+* {
+  box-sizing: border-box;
+}
+
+h1 {
+  font-family: arial;
+  display: none;
+}
+
+html,
+body {
+  background-repeat: no-repeat;
+  font-family: arial;
+  margin: 0;
+  padding: none;
+  background-color: rgb(0, 0, 0);
+  color: rgb(117, 110, 101);
+  height: 100%;
+}
+
+footer {
+  font-family: arial;
+  font-size: 12px;
+  padding-left: 10px;
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+}
+
+button {
+  font-family: arial;
+  font-size: 12px;
+  background-color: rgb(80, 69, 55);
+  color: rgb(218, 211, 201);
+  border: none;
+  padding: 5px;
+  float: right;
+  margin-right: 20px;
+  border-radius: 3px;
+}
+button:hover {
+  background-color: rgb(59, 47, 32);
+}
+
+a {
+  text-decoration: none;
+}
+a {
+  color: rgb(172, 113, 37);
+}
+a:hover {
+  color: rgb(235, 205, 140);
+}
+
+#canvas {
+  padding-right: 0;
+  display: block;
+  border: 0px none;
+  visibility: hidden;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
