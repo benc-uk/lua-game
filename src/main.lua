@@ -80,9 +80,9 @@ function love.draw()
 
   render.floorCeil(player)
 
-  local zbuffer = render.walls(player, map)
+  local zBuffer = render.walls(player, map)
 
-  render.sprites(player, map, zbuffer)
+  render.sprites(player, map, zBuffer)
 
   -- Show the FPS
   love.graphics.setFont(love.graphics.newFont(22))

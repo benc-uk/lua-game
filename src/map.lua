@@ -3,12 +3,21 @@ local imageCache = require "image-cache"
 local sprite     = require "sprite"
 
 local function newCell(x, y)
-  return {
+  local c = {
     x = x,
     y = y,
     isWall = false,
+    thinVert = false,
+    thinHori = false,
     item = nil,
+    id = math.random(1000)
   }
+
+  function c.__tostring()
+    return string.format("Cell(%d, %d)", self.x, self.y)
+  end
+
+  return c
 end
 
 local map = {}
@@ -71,11 +80,21 @@ function map:load(mapName)
         s.scale = 0.7
         s.alpha = 0.5
       end
+
+      if dataValue == "|" then
+        cell.thinVert = true
+        cell.isWall = true
+      end
+
+      if dataValue == "-" then
+        cell.thinHori = true
+        cell.isWall = true
+      end
     end
   end
 
   m.name = "Demo Dungeon"
-  m.tileSetName = mapData.tileset
+  m.tileSetName = mapData.tileset or "default"
   m.width = mapData.width
   m.height = mapData.height
   m.playerStartCell = { mapData.playerStartCell[1], mapData.playerStartCell[2] }
@@ -93,6 +112,7 @@ function map:get(x, y)
   if x < 1 or x > self.width or y < 1 or y > self.height then
     return nil
   end
+
   return self.cells[math.floor(x)][math.floor(y)]
 end
 

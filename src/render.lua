@@ -3,6 +3,7 @@
 local magic      = require "magic"
 local utils      = require "utils"
 local lume       = require "lib.rxi.lume"
+local vec2       = require "vector"
 
 local pixelcode  = [[
   uniform vec2 playerPos;
@@ -96,7 +97,7 @@ local function floorCeil(player)
 end
 
 -- This function draws the sprites in the order of their distance from the player
-local function sprites(player, map, zbuffer)
+local function sprites(player, map, zBuffer)
   -- Order the sprites by distance to the player
   table.sort(map.sprites, function(a, b)
     return (a.pos - player.pos):length() > (b.pos - player.pos):length()
@@ -105,13 +106,92 @@ local function sprites(player, map, zbuffer)
   -- Draw the sprites
   for s = 1, #map.sprites do
     local sprite = map.sprites[s]
-    sprite:draw(player.pos, player.facing, player.camPlane, zbuffer)
+    sprite:draw(player.pos, player.facing, player.camPlane, zBuffer)
   end
+end
+
+-- Cast a ray from the player position in the direction of facing
+-- and return the distance to the first wall hit
+local function castRay(pos, dir, map)
+  -- current grid position
+  local gridPos = { x = math.floor(pos.x), y = math.floor(pos.y) }
+
+  -- length of ray from current position to next x or y-side
+  local sideDistX, sideDistY
+
+  -- length of ray from one x or y-side to next x or y-side
+  local deltaDistX = math.abs(1 / dir.x)
+  local deltaDistY = math.abs(1 / dir.y)
+  local hitDist
+
+  -- what direction to step in x or y direction (either +1 or -1)
+  local stepX, stepY
+
+  -- determine step direction and initial sideDist
+  if dir.x < 0 then
+    stepX = -1
+    sideDistX = (pos.x - gridPos.x) * deltaDistX
+  else
+    stepX = 1
+    sideDistX = (gridPos.x + 1.0 - pos.x) * deltaDistX
+  end
+  if dir.y < 0 then
+    stepY = -1
+    sideDistY = (pos.y - gridPos.y) * deltaDistY
+  else
+    stepY = 1
+    sideDistY = (gridPos.y + 1.0 - pos.y) * deltaDistY
+  end
+
+  -- perform DDA
+  local hit = false
+  local side
+  local steps = 0
+  while not hit and steps < magic.maxDDA do
+    -- jump to next grid square, either in x-direction, or in y-direction
+    if sideDistX < sideDistY then
+      sideDistX = sideDistX + deltaDistX
+      gridPos.x = gridPos.x + stepX
+      side = 0
+    else
+      sideDistY = sideDistY + deltaDistY
+      gridPos.y = gridPos.y + stepY
+      side = 1
+    end
+
+    -- check if ray has hit something
+    local cell = map:get(gridPos.x, gridPos.y)
+    if cell == nil then
+      hit = true
+    elseif cell.isWall then
+      hit = true
+    end
+    if cell ~= nil and cell.isWall then
+      hit = true
+    end
+
+    steps = steps + 1
+    if steps >= magic.maxDDA then
+      return { dist = -1, worldPos = nil, side = nil, cell = nil }
+    end
+  end
+
+  -- calculate distance projected on camera direction
+  if side == 0 then
+    hitDist = (gridPos.x - pos.x + (1 - stepX) / 2) / dir.x
+  else
+    hitDist = (gridPos.y - pos.y + (1 - stepY) / 2) / dir.y
+  end
+
+  -- world position of the hit
+  local worldPos = vec2:new(pos.x + dir.x * hitDist, pos.y + dir.y * hitDist)
+
+  return { dist = hitDist, worldPos = worldPos, side = side, cell = map:get(gridPos.x, gridPos.y) }
 end
 
 -- This function draws the walls using raycasting
 local function walls(player, map)
-  local zbuffer = {}
+  local zBuffer = {}
 
   -- draw walls using raycasting
   for screenX = 0, love.graphics.getWidth() do
@@ -119,19 +199,13 @@ local function walls(player, map)
     local ray = player:getRay(screenX)
 
     -- Cast the ray from player pos, out to find the first wall hit
-    local hit = player.pos:castRay(ray, function(x, y)
-      local cell = map:get(x, y)
-      if cell and cell.isWall then
-        return true
-      end
-      return false
-    end)
+    local hit = castRay(player.pos, ray, map)
 
-    if hit.dist > 0 then
-      math.randomseed(hit.cellX + hit.cellY)
+    if hit.dist > 0 and hit.cell then
+      math.randomseed(hit.cell.id)
       local wallTexture = map.tileSet.images["wall_" .. math.random(1, 3)]
 
-      zbuffer[screenX] = hit.dist
+      zBuffer[screenX] = hit.dist
 
       -- Correct the distance to the wall for the fish-eye effect
       local wallHeightDist = hit.dist * math.cos(math.atan2(ray.y, ray.x) - math.atan2(player.facing.y, player.facing.x))
@@ -160,11 +234,16 @@ local function walls(player, map)
         tileHeight, tileWidth, tileHeight)
       love.graphics.setColor(light, light, light)
       love.graphics.draw(wallTexture, wallSlice, screenX, wallY, 0, 1, wallHeight / tileHeight, 0, 0)
+    else
+      -- If no wall hit, set the zbuffer to a large value
+      zBuffer[screenX] = 9999
     end
   end
 
-  return zbuffer
+  return zBuffer
 end
+
+
 
 return {
   init = init,
