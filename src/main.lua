@@ -38,7 +38,7 @@ function love.update()
 
   -- check inside a wall or out of bounds
   local cell = map:get(player.pos.x, player.pos.y)
-  if cell == nil or cell.isWall then
+  if (cell == nil or cell.isWall) then
     -- Move back to the last position
     player.pos = player.pos - player.facing * player.speed * love.timer.getDelta()
     player.speed = 0

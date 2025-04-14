@@ -10,8 +10,7 @@ function cell:new(x, y)
     x = x,
     y = y,
     isWall = false,
-    thinVert = false,
-    thinHori = false,
+    thin = false,
     item = nil,
     id = math.random(1000)
   }
@@ -86,12 +85,12 @@ function map:load(mapName)
       end
 
       if dataValue == "|" then
-        c.thinVert = true
+        c.thin = true
         c.isWall = true
       end
 
       if dataValue == "-" then
-        c.thinHori = true
+        c.thin = true
         c.isWall = true
       end
     end

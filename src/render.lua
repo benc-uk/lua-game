@@ -122,7 +122,7 @@ local function castRay(pos, dir, map)
   -- length of ray from one x or y-side to next x or y-side
   local deltaDistX = math.abs(1 / dir.x)
   local deltaDistY = math.abs(1 / dir.y)
-  local hitDist = -1
+  local hitDist
 
   -- what direction to step in x or y direction (either +1 or -1)
   local stepX, stepY
@@ -175,56 +175,66 @@ local function castRay(pos, dir, map)
     end
   end
 
-  -- check if cell was thinVert or thinHori
+  -- Code for thin walls, if we hit a wall, we need to make some more checks & adjustments
   local thinWallMove = 0
-
-  if cell ~= nil and cell.thinVert then
-    -- For vertical thin walls, we need to check if ray crosses the middle of the cell
+  local debug = 0
+  if cell ~= nil and cell.thin then
     local offsetPos = vec2:new(pos.x, pos.y)
-    local nextPos = vec2:new(
-      offsetPos.x + dir.x * (sideDistX - deltaDistX * 0.5),
-      offsetPos.y + dir.y * (sideDistX - deltaDistX * 0.5)
-    )
-    local cellX = math.floor(nextPos.x)
-    local cellY = math.floor(nextPos.y)
 
-    if cellX == gridPos.x and cellY == gridPos.y then
-      -- If we're still in the same cell, we need to adjust the hit distance
-      thinWallMove = ((gridPos.x + 0.5) - pos.x) / dir.x - ((gridPos.x) - pos.x) / dir.x
+    -- Next pos is checking ahead 0.5 units in the direction of the ray
+    local nextPos = vec2:new()
+    if side == 0 then
+      nextPos.x = offsetPos.x + dir.x * (sideDistX - deltaDistX * 0.5)
+      nextPos.y = offsetPos.y + dir.y * (sideDistX - deltaDistX * 0.5)
+    else
+      nextPos.x = offsetPos.x + dir.x * (sideDistY - deltaDistY * 0.5)
+      nextPos.y = offsetPos.y + dir.y * (sideDistY - deltaDistY * 0.5)
     end
 
-    -- if we hit a another cell, we need to set the hit distance that cell, and we've hit it on the inside
-    if cellX ~= gridPos.x or cellY ~= gridPos.y then
-      gridPos.x = cellX
-      gridPos.y = cellY
-      side = 1
+    -- This is the *next* cell we hit, we need to check if it matches the current cell
+    --print(nextPos.x, nextPos.y)
+    local nextCellX = math.floor(nextPos.x)
+    local nextCellY = math.floor(nextPos.y)
+
+    -- If we're still in the same cell, we've hit the thin wall, so adjust the hit distance
+    if nextCellX == gridPos.x and nextCellY == gridPos.y then
+      if side == 0 then
+        if dir.x > 0 then
+          thinWallMove = ((gridPos.x + 0.5) - pos.x) / dir.x - ((gridPos.x) - pos.x) / dir.x
+        else
+          thinWallMove = ((gridPos.x) - pos.x) / dir.x - ((gridPos.x + 0.5) - pos.x) / dir.x
+        end
+      else
+        if dir.y > 0 then
+          thinWallMove = ((gridPos.y + 0.5) - pos.y) / dir.y - ((gridPos.y) - pos.y) / dir.y
+        else
+          thinWallMove = ((gridPos.y) - pos.y) / dir.y - ((gridPos.y + 0.5) - pos.y) / dir.y
+        end
+      end
+    end
+
+    -- If we're in a different cell, we hit the side of the wall next to the thin wall
+    -- NOTE: Thin walls should *ALWAYS* have walls either side of them, so this should be safe
+    if (nextCellX ~= gridPos.x or nextCellY ~= gridPos.y) then
+      if side == 0 then
+        side = 1
+        if (dir.y > 0) then
+          gridPos.y = gridPos.y + 1
+        else
+          gridPos.y = gridPos.y - 1
+        end
+      else
+        side = 0
+        if (dir.x > 0) then
+          gridPos.x = gridPos.x + 1
+        else
+          gridPos.x = gridPos.x - 1
+        end
+      end
     end
   end
 
-  if cell ~= nil and cell.thinHori then
-    -- For horizontal thin walls, we need to check if ray crosses the middle of the cell
-    local offsetPos = vec2:new(pos.x, pos.y)
-    local nextPos = vec2:new(
-      offsetPos.x + dir.x * (sideDistY - deltaDistY * 0.5),
-      offsetPos.y + dir.y * (sideDistY - deltaDistY * 0.5)
-    )
-    local cellX = math.floor(nextPos.x)
-    local cellY = math.floor(nextPos.y)
-
-    if cellX == gridPos.x and cellY == gridPos.y then
-      -- If we're still in the same cell, we need to adjust the hit distance
-      thinWallMove = ((gridPos.y + 0.5) - pos.y) / dir.y - ((gridPos.y) - pos.y) / dir.y
-    end
-
-    -- if we hit a another cell, we need to set the hit distance that cell, and we've hit it on the inside
-    if cellX ~= gridPos.x or cellY ~= gridPos.y then
-      gridPos.x = cellX
-      gridPos.y = cellY
-      side = 0
-    end
-  end
-
-  -- calculate distance projected on camera direction
+  -- Finally, calculate distance projected on camera direction
   if side == 0 then
     hitDist = (gridPos.x - pos.x + (1 - stepX) / 2) / dir.x + thinWallMove
   else
@@ -234,7 +244,7 @@ local function castRay(pos, dir, map)
   -- world position of the hit
   local worldPos = vec2:new(pos.x + dir.x * hitDist, pos.y + dir.y * hitDist)
 
-  return { dist = hitDist, worldPos = worldPos, side = side, cell = map:get(gridPos.x, gridPos.y) }
+  return { dist = hitDist, worldPos = worldPos, side = side, cell = map:get(gridPos.x, gridPos.y), debug = debug }
 end
 
 -- This function draws the walls using raycasting
@@ -249,10 +259,20 @@ local function walls(player, map)
     -- Cast the ray from player pos, out to find the first wall hit
     local hit = castRay(player.pos, ray, map)
 
+    -- TEMP DEBUG
+    if hit and hit.debug > 0 then
+      -- draw a green line full height of the screen to show the ray
+      love.graphics.setColor(0, 1, 0, 1)
+      if hit.debug == 2 then
+        love.graphics.setColor(0.4, 0, 0, 1)
+      end
+      love.graphics.line(screenX, 0, screenX, love.graphics.getHeight())
+    end
+
     if hit.dist > 0 and hit.cell then
       math.randomseed(hit.cell.id)
       local wallTexture = map.tileSet.images["wall_" .. math.random(1, 3)]
-      if hit.cell.thinVert or hit.cell.thinHori then
+      if hit.cell.thin then
         wallTexture = map.tileSet.images["door"]
       end
 
