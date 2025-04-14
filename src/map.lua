@@ -2,7 +2,10 @@ local json       = require "lib.rxi.json"
 local imageCache = require "image-cache"
 local sprite     = require "sprite"
 
-local function newCell(x, y)
+local map        = {}
+local cell       = {}
+
+function cell:new(x, y)
   local c = {
     x = x,
     y = y,
@@ -13,14 +16,15 @@ local function newCell(x, y)
     id = math.random(1000)
   }
 
-  function c.__tostring()
-    return string.format("Cell(%d, %d)", self.x, self.y)
-  end
+  setmetatable(c, self)
+  self.__index = self
 
   return c
 end
 
-local map = {}
+function cell:__tostring()
+  return string.format("Cell(%d, %d)", self.x, self.y)
+end
 
 function map:load(mapName)
   print("Loading map: " .. mapName)
@@ -40,7 +44,7 @@ function map:load(mapName)
   for i = 1, mapData.height do
     m.cells[i] = {}
     for j = 1, mapData.width do
-      m.cells[i][j] = newCell(i, j)
+      m.cells[i][j] = cell:new(i, j)
     end
   end
 
@@ -49,46 +53,46 @@ function map:load(mapName)
   for rowIndex = 1, #mapData.layout do
     local dataRow = mapData.layout[rowIndex]
     for colIndex = 1, #dataRow do
-      local cell = m.cells[colIndex][rowIndex]
+      local c = m.cells[colIndex][rowIndex]
       local dataValue = dataRow[colIndex]
 
       if dataValue == "#" then
-        cell.isWall = true
+        c.isWall = true
       end
 
       if dataValue == "a" then
-        local s = sprite:new(cell.x + 0.5, cell.y + 0.5, "barrel")
+        local s = sprite:new(c.x + 0.5, c.y + 0.5, "barrel")
         m.sprites[#m.sprites + 1] = s
         s.scale = 0.5
       end
 
       if dataValue == "o" then
-        local s = sprite:new(cell.x + 0.5, cell.y + 0.5, "skeleton")
+        local s = sprite:new(c.x + 0.5, c.y + 0.5, "skeleton")
         m.sprites[#m.sprites + 1] = s
         s.scale = 0.9
       end
 
       if dataValue == "w" then
-        local s = sprite:new(cell.x + 0.5, cell.y + 0.5, "wiz")
+        local s = sprite:new(c.x + 0.5, c.y + 0.5, "wiz")
         m.sprites[#m.sprites + 1] = s
         s.scale = 0.7
       end
 
       if dataValue == "s" then
-        local s = sprite:new(cell.x + 0.5, cell.y + 0.5, "spectre")
+        local s = sprite:new(c.x + 0.5, c.y + 0.5, "spectre")
         m.sprites[#m.sprites + 1] = s
         s.scale = 0.7
         s.alpha = 0.5
       end
 
       if dataValue == "|" then
-        cell.thinVert = true
-        cell.isWall = true
+        c.thinVert = true
+        c.isWall = true
       end
 
       if dataValue == "-" then
-        cell.thinHori = true
-        cell.isWall = true
+        c.thinHori = true
+        c.isWall = true
       end
     end
   end
