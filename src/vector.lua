@@ -1,6 +1,6 @@
 local vec2 = {}
 
--- vec2 class constructor
+-- Vec2 class constructor
 function vec2:new(x, y)
   local obj = { x = x or 0, y = y or 0 }
   setmetatable(obj, self)
@@ -56,7 +56,7 @@ function vec2:scaleNew(f)
   return vec2:new(self.x * f, self.y * f)
 end
 
--- multiplication with a scalar or another vector
+-- Multiplication with a scalar or another vector
 function vec2:__mul(o)
   if type(o) == "number" then
     return vec2:new(self.x * o, self.y * o)
@@ -121,7 +121,7 @@ function vec2:rotate(deg)
   return self
 end
 
--- tostring method for debugging
+-- Tostring method for debugging
 function vec2:__tostring()
   return string.format("vec2(%f, %f)", self.x, self.y)
 end

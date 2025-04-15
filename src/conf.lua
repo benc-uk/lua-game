@@ -19,6 +19,7 @@ function love.conf(conf)
   conf.window.icon = "assets/icons/main.png"
   conf.window.resizable = false
   conf.window.fullscreentype = "desktop"
+  conf.gammacorrect = true
 
   if IS_DEBUG then
     conf.window.x = 20

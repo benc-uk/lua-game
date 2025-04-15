@@ -48,7 +48,7 @@ function map:load(mapName)
   end
 
   m.sprites = {}
-  -- loop over mapData.layout and fill the map with cells
+  -- Loop over mapData.layout and fill the map with cells
   for rowIndex = 1, #mapData.layout do
     local dataRow = mapData.layout[rowIndex]
     for colIndex = 1, #dataRow do
@@ -87,11 +87,13 @@ function map:load(mapName)
       if dataValue == "|" then
         c.thin = true
         c.isWall = true
+        c.doorOpenAmount = 0.5
       end
 
       if dataValue == "-" then
         c.thin = true
         c.isWall = true
+        c.doorOpenAmount = 0.5
       end
     end
   end

@@ -1,8 +1,8 @@
--- local function overlay()
--- love.graphics.setColor(0, 1, 0)
--- love.graphics.setLineWidth(1)
--- love.graphics.line(love.graphics.getWidth() / 2, 0, love.graphics.getWidth() / 2, love.graphics.getHeight())
--- love.graphics.line(0, love.graphics.getHeight() / 2, love.graphics.getWidth(), love.graphics.getHeight() / 2)
+-- Local function overlay()
+-- Love.graphics.setColor(0, 1, 0)
+-- Love.graphics.setLineWidth(1)
+-- Love.graphics.line(love.graphics.getWidth() / 2, 0, love.graphics.getWidth() / 2, love.graphics.getHeight())
+-- Love.graphics.line(0, love.graphics.getHeight() / 2, love.graphics.getWidth(), love.graphics.getHeight() / 2)
 
 --   local image = Map.tiles["wall_1"]
 --   local tileWidth = image:getWidth()
@@ -37,4 +37,4 @@
 --     (Player.pos.y + Player.facing.y) * tileHeight
 --   )
 --   love.graphics.scale(1.3333, 1.3333)
--- end
+-- End

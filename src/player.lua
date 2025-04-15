@@ -70,7 +70,7 @@ end
 
 function player:getRay(screenX)
   local ray = Vec2:new(0, 0)
-  local cameraX = 2 * screenX / love.graphics.getWidth() - 1 -- x-coordinate in camera space
+  local cameraX = 2 * screenX / love.graphics.getWidth() - 1 -- X-coordinate in camera space
   ray.x = self.facing.x + self.camPlane.x * cameraX
   ray.y = self.facing.y + self.camPlane.y * cameraX
   return ray:normalizeNew()

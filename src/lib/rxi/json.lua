@@ -1,17 +1,17 @@
 --
--- json.lua
+-- Json.lua
 --
 -- Copyright (c) 2020 rxi
 --
 -- Permission is hereby granted, free of charge, to any person obtaining a copy of
--- this software and associated documentation files (the "Software"), to deal in
--- the Software without restriction, including without limitation the rights to
--- use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
--- of the Software, and to permit persons to whom the Software is furnished to do
--- so, subject to the following conditions:
+-- This software and associated documentation files (the "Software"), to deal in
+-- The Software without restriction, including without limitation the rights to
+-- Use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+-- Of the Software, and to permit persons to whom the Software is furnished to do
+-- So, subject to the following conditions:
 --
 -- The above copyright notice and this permission notice shall be included in all
--- copies or substantial portions of the Software.
+-- Copies or substantial portions of the Software.
 --
 -- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 -- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -66,7 +66,7 @@ local function encode_table(val, stack)
   stack[val] = true
 
   if rawget(val, 1) ~= nil or next(val) == nil then
-    -- Treat as array -- check keys are valid and it is not sparse
+    -- Treat as array -- Check keys are valid and it is not sparse
     local n = 0
     for k in pairs(val) do
       if type(k) ~= "number" then
@@ -185,7 +185,7 @@ end
 
 
 local function codepoint_to_utf8(n)
-  -- http://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=iws-appendixa
+  -- Http://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=iws-appendixa
   local f = math.floor
   if n <= 0x7f then
     return string.char(n)

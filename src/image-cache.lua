@@ -3,7 +3,7 @@ local imageCache = {}
 function imageCache:load(path)
   local ic = {}
 
-  -- count files in the directory
+  -- Count files in the directory
   local files = love.filesystem.getDirectoryItems(path)
   print("Caching images: " .. path)
   assert(#files > 0, "No files found in directory: " .. path)
@@ -11,7 +11,7 @@ function imageCache:load(path)
   ic.filterMode = "nearest"
   ic.images = {}
 
-  -- loop over files and load images
+  -- Loop over files and load images
   for _, file in ipairs(files) do
     local ok, image = pcall(love.graphics.newImage, path .. "/" .. file)
     if ok then
@@ -22,7 +22,7 @@ function imageCache:load(path)
     end
   end
 
-  -- add size field to the cache based on the first image
+  -- Add size field to the cache based on the first image
   -- NOTE: We assume all images are the same size, e.g. a tileset
   local first = next(ic.images)
   if first then
