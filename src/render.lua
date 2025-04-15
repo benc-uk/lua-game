@@ -146,8 +146,8 @@ local function castRay(pos, dir, map)
   -- perform DDA
   local hit = false
   local side
-  local steps = 0
-  local cell = nil
+  local steps = 0 -- A simple counter to limit the number of DDA loops
+  local thinWallMove = 0
   while not hit and steps < magic.maxDDA do
     -- jump to next grid square, either in x-direction, or in y-direction
     if sideDistX < sideDistY then
@@ -161,76 +161,74 @@ local function castRay(pos, dir, map)
     end
 
     -- check if ray has hit something
-    cell = map:get(gridPos.x, gridPos.y)
+    local cell = map:get(gridPos.x, gridPos.y)
     if cell ~= nil and cell.isWall then
       hit = true
+
+      -- code for thin walls, if we hit a wall, we need to make some more checks & adjustments
+      if cell ~= nil and cell.thin then
+        local offsetPos = vec2:new(pos.x, pos.y)
+
+        -- Next pos is checking ahead 0.5 units in the direction of the ray
+        local nextPos = vec2:new()
+        if side == 0 then
+          nextPos.x = offsetPos.x + dir.x * (sideDistX - deltaDistX * 0.5)
+          nextPos.y = offsetPos.y + dir.y * (sideDistX - deltaDistX * 0.5)
+        else
+          nextPos.x = offsetPos.x + dir.x * (sideDistY - deltaDistY * 0.5)
+          nextPos.y = offsetPos.y + dir.y * (sideDistY - deltaDistY * 0.5)
+        end
+
+        -- this is the *next* cell we hit, we need to check if it matches the current cell
+        local nextCellPos = vec2:new(math.floor(nextPos.x), math.floor(nextPos.y))
+
+        -- If we're still in the same cell, we've hit the thin wall, so adjust the hit distance
+        if nextCellPos.x == gridPos.x and nextCellPos.y == gridPos.y then
+          if side == 0 then
+            if dir.x > 0 then
+              thinWallMove = ((gridPos.x + 0.5) - pos.x) / dir.x - ((gridPos.x) - pos.x) / dir.x
+            else
+              thinWallMove = ((gridPos.x) - pos.x) / dir.x - ((gridPos.x + 0.5) - pos.x) / dir.x
+            end
+          else
+            if dir.y > 0 then
+              thinWallMove = ((gridPos.y + 0.5) - pos.y) / dir.y - ((gridPos.y) - pos.y) / dir.y
+            else
+              thinWallMove = ((gridPos.y) - pos.y) / dir.y - ((gridPos.y + 0.5) - pos.y) / dir.y
+            end
+          end
+        end
+
+        -- If we're in a different cell, we hit the side of the wall next to the thin wall
+        -- NOTE: Thin walls should *ALWAYS* have walls either side of them, so this should be safe
+        if (nextCellPos.x ~= gridPos.x or nextCellPos.y ~= gridPos.y) then
+          if side == 0 then
+            side = 1
+            if (dir.y > 0) then
+              gridPos.y = gridPos.y + 1
+            else
+              gridPos.y = gridPos.y - 1
+            end
+          else
+            side = 0
+            if (dir.x > 0) then
+              gridPos.x = gridPos.x + 1
+            else
+              gridPos.x = gridPos.x - 1
+            end
+          end
+        end
+      end
     elseif cell == nil then
       -- Check for out of bounds, should not happen in a closed map
       hit = true
     end
+    -- END of thin wall code
 
+    -- This is a simple counter to put a max distance on the ray
     steps = steps + 1
     if steps >= magic.maxDDA then
       return { dist = -1, worldPos = nil, side = nil, cell = nil }
-    end
-  end
-
-  -- Code for thin walls, if we hit a wall, we need to make some more checks & adjustments
-  local thinWallMove = 0
-  local debug = 0
-  if cell ~= nil and cell.thin then
-    local offsetPos = vec2:new(pos.x, pos.y)
-
-    -- Next pos is checking ahead 0.5 units in the direction of the ray
-    local nextPos = vec2:new()
-    if side == 0 then
-      nextPos.x = offsetPos.x + dir.x * (sideDistX - deltaDistX * 0.5)
-      nextPos.y = offsetPos.y + dir.y * (sideDistX - deltaDistX * 0.5)
-    else
-      nextPos.x = offsetPos.x + dir.x * (sideDistY - deltaDistY * 0.5)
-      nextPos.y = offsetPos.y + dir.y * (sideDistY - deltaDistY * 0.5)
-    end
-
-    -- This is the *next* cell we hit, we need to check if it matches the current cell
-    --print(nextPos.x, nextPos.y)
-    local nextCellX = math.floor(nextPos.x)
-    local nextCellY = math.floor(nextPos.y)
-
-    -- If we're still in the same cell, we've hit the thin wall, so adjust the hit distance
-    if nextCellX == gridPos.x and nextCellY == gridPos.y then
-      if side == 0 then
-        if dir.x > 0 then
-          thinWallMove = ((gridPos.x + 0.5) - pos.x) / dir.x - ((gridPos.x) - pos.x) / dir.x
-        else
-          thinWallMove = ((gridPos.x) - pos.x) / dir.x - ((gridPos.x + 0.5) - pos.x) / dir.x
-        end
-      else
-        if dir.y > 0 then
-          thinWallMove = ((gridPos.y + 0.5) - pos.y) / dir.y - ((gridPos.y) - pos.y) / dir.y
-        else
-          thinWallMove = ((gridPos.y) - pos.y) / dir.y - ((gridPos.y + 0.5) - pos.y) / dir.y
-        end
-      end
-    end
-
-    -- If we're in a different cell, we hit the side of the wall next to the thin wall
-    -- NOTE: Thin walls should *ALWAYS* have walls either side of them, so this should be safe
-    if (nextCellX ~= gridPos.x or nextCellY ~= gridPos.y) then
-      if side == 0 then
-        side = 1
-        if (dir.y > 0) then
-          gridPos.y = gridPos.y + 1
-        else
-          gridPos.y = gridPos.y - 1
-        end
-      else
-        side = 0
-        if (dir.x > 0) then
-          gridPos.x = gridPos.x + 1
-        else
-          gridPos.x = gridPos.x - 1
-        end
-      end
     end
   end
 
@@ -258,16 +256,6 @@ local function walls(player, map)
 
     -- Cast the ray from player pos, out to find the first wall hit
     local hit = castRay(player.pos, ray, map)
-
-    -- TEMP DEBUG
-    if hit and hit.debug > 0 then
-      -- draw a green line full height of the screen to show the ray
-      love.graphics.setColor(0, 1, 0, 1)
-      if hit.debug == 2 then
-        love.graphics.setColor(0.4, 0, 0, 1)
-      end
-      love.graphics.line(screenX, 0, screenX, love.graphics.getHeight())
-    end
 
     if hit.dist > 0 and hit.cell then
       math.randomseed(hit.cell.id)
