@@ -1,6 +1,6 @@
 local json       = require "lib.rxi.json"
 local imageCache = require "image-cache"
-local sprite     = require "sprite"
+local item       = require "item"
 
 local map        = {}
 local cell       = {}
@@ -9,7 +9,8 @@ function cell:new(x, y)
   local c = {
     x = x,
     y = y,
-    isWall = false,
+    render = false,
+    blocking = false,
     thin = false,
     item = nil,
     id = math.random(1000)
@@ -47,53 +48,34 @@ function map:load(mapName)
     end
   end
 
+  -- Sprites held in their own array for easy of rendering/sorting
   m.sprites = {}
-  -- Loop over mapData.layout and fill the map with cells
+
+  -- Loop over mapData.layout populate the cells
   for rowIndex = 1, #mapData.layout do
     local dataRow = mapData.layout[rowIndex]
     for colIndex = 1, #dataRow do
       local c = m.cells[colIndex][rowIndex]
-      local dataValue = dataRow[colIndex]
+      local mapSymbol = dataRow[colIndex]
 
-      if dataValue == "#" then
-        c.isWall = true
+      if mapSymbol == "#" then
+        c.render = true
+        c.blocking = true
       end
 
-      if dataValue == "a" then
-        local s = sprite:new(c.x + 0.5, c.y + 0.5, "barrel")
-        m.sprites[#m.sprites + 1] = s
-        s.scale = 0.5
+      if mapSymbol == "b" then
+        c.item = item:new(c, "barrel")
+        m.sprites[#m.sprites + 1] = c.item.sprite
       end
 
-      if dataValue == "o" then
-        local s = sprite:new(c.x + 0.5, c.y + 0.5, "skeleton")
-        m.sprites[#m.sprites + 1] = s
-        s.scale = 0.9
+      if mapSymbol == "c" then
+        c.item = item:new(c, "chest")
+        m.sprites[#m.sprites + 1] = c.item.sprite
       end
 
-      if dataValue == "w" then
-        local s = sprite:new(c.x + 0.5, c.y + 0.5, "wiz")
-        m.sprites[#m.sprites + 1] = s
-        s.scale = 0.7
-      end
-
-      if dataValue == "s" then
-        local s = sprite:new(c.x + 0.5, c.y + 0.5, "spectre")
-        m.sprites[#m.sprites + 1] = s
-        s.scale = 0.7
-        s.alpha = 0.5
-      end
-
-      if dataValue == "|" then
+      if mapSymbol == "|" or mapSymbol == "-" then
         c.thin = true
-        c.isWall = true
-        c.doorOpenAmount = 0.5
-      end
-
-      if dataValue == "-" then
-        c.thin = true
-        c.isWall = true
-        c.doorOpenAmount = 0.5
+        c.render = true
       end
     end
   end

@@ -41,7 +41,12 @@ local function frac(n)
   return n - math.floor(n)
 end
 
+local lerp = function(v, n)
+  return v * (1 - n) + n
+end
+
 return {
   gradientMesh = gradientMesh,
   frac = frac,
+  lerp = lerp,
 }

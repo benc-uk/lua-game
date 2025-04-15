@@ -162,7 +162,7 @@ local function castRay(pos, dir, map)
 
     -- Check if ray has hit something
     local cell = map:get(gridPos.x, gridPos.y)
-    if cell ~= nil and cell.isWall then
+    if cell ~= nil and cell.render then
       hit = true
 
       -- Code for thin walls, if we hit a wall, we need to make some more checks & adjustments
@@ -295,8 +295,8 @@ local function walls(player, map)
       local wallY = (love.graphics.getHeight() - wallHeight) / 2
 
       -- Light falls off with distance inverse square law and should be clamped to 0 - 1
-      local light = lume.clamp(1 / (hitDist), 0, 1)
-      light = light * 0.90 + 0.10 -- Make it brighter
+      local light = lume.clamp(1 / (hitDist ^ hitDist), 0, 1)
+      light = utils.lerp(light, 0.05)
 
       -- Texture mapping, get fraction of the world pos to use as the u coordinate of the texture
       local texU

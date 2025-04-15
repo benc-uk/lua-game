@@ -1,4 +1,4 @@
-local Vec2 = require "vector"
+local vec2 = require "vector"
 local magic = require "magic"
 
 local player = {}
@@ -9,9 +9,9 @@ function player:new(x, y)
     maxSpeed = 3,
     acceleration = 4,
 
-    pos = Vec2:new(x, y),
-    facing = Vec2:new(1, 0),
-    camPlane = Vec2:new(0, magic.FOV), -- Camera plane perpendicular to the facing direction
+    pos = vec2:new(x, y),
+    facing = vec2:new(1, 0),
+    camPlane = vec2:new(0, magic.FOV), -- Camera plane perpendicular to the facing direction
     angle = 0,
     speed = 0,
   }
@@ -69,10 +69,13 @@ function player:comeToStop()
 end
 
 function player:getRay(screenX)
-  local ray = Vec2:new(0, 0)
   local cameraX = 2 * screenX / love.graphics.getWidth() - 1 -- X-coordinate in camera space
-  ray.x = self.facing.x + self.camPlane.x * cameraX
-  ray.y = self.facing.y + self.camPlane.y * cameraX
+
+  local ray = vec2:new(
+    self.facing.x + self.camPlane.x * cameraX,
+    self.facing.y + self.camPlane.y * cameraX
+  )
+
   return ray:normalizeNew()
 end
 
