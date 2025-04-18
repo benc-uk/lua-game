@@ -4,7 +4,7 @@ local render    = require "render"
 
 local map       = {}
 local player    = {}
-
+local zBuffer   = {}
 function love.load()
   map = mapLib:load("level-1")
 
@@ -12,6 +12,10 @@ function love.load()
   player:rotate(map.playerStartDir * 90)
 
   render.init(map.tileSetName, map.tileSet.size.width)
+
+  for i = 0, love.graphics.getWidth() do
+    zBuffer[i] = math.huge
+  end
 end
 
 function love.update()
@@ -34,6 +38,13 @@ function love.update()
     player:comeToStop()
   end
 
+  if love.keyboard.isDown("space") then
+    local c = player:getCellFacing(map)
+    if c ~= nil and c.door then
+      c.blocking = not c.blocking
+    end
+  end
+
   player:move(love.timer.getDelta())
 
   -- Check inside a wall or out of bounds
@@ -49,29 +60,18 @@ function love.mousepressed(_, _, button)
   if button == 1 then
     if love.mouse.isGrabbed() then
       love.mouse.setGrabbed(false)
-      love.mouse.setVisible(true)
+      love.mouse.setRelativeMode(false)
       return
     end
 
     love.mouse.setGrabbed(true)
-    love.mouse.setVisible(false)
+    love.mouse.setRelativeMode(true)
   end
 end
 
-function love.mousemoved(x)
+function love.mousemoved(_, _, dx)
   if love.mouse.isGrabbed() then
-    -- Calculate the angle to turn based on mouse movement
-    local sensitivity = 0.1
-    local centerXDiff = love.graphics.getWidth() / 2 - x
-    local angle = -centerXDiff * sensitivity
-
-    -- Rotate the player based on mouse movement
-    player:rotate(angle)
-
-    -- Reset mouse position to the center of the window
-    local centerX = love.graphics.getWidth() / 2
-    local centerY = love.graphics.getHeight() / 2
-    love.mouse.setPosition(centerX, centerY)
+    player:rotate(dx * 0.1)
   end
 end
 
@@ -81,7 +81,7 @@ function love.draw()
 
   render.floorCeil(player)
 
-  local zBuffer = render.walls(player, map)
+  render.walls(player, map, zBuffer)
 
   render.sprites(player, map, zBuffer)
 

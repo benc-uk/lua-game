@@ -4,6 +4,7 @@ local item       = require "item"
 
 local map        = {}
 local cell       = {}
+cell.__index     = cell
 
 function cell:new(x, y)
   local c = {
@@ -12,6 +13,8 @@ function cell:new(x, y)
     render = false,
     blocking = false,
     thin = false,
+    door = false,
+    openAmount = 0,
     item = nil,
     id = math.random(1000)
   }
@@ -73,9 +76,16 @@ function map:load(mapName)
         m.sprites[#m.sprites + 1] = c.item.sprite
       end
 
+      if mapSymbol == "." then
+        c.blocking = true
+      end
+
       if mapSymbol == "|" or mapSymbol == "-" then
         c.thin = true
         c.render = true
+        c.door = true
+        c.openAmount = 0.6
+        c.blocking = true
       end
     end
   end
@@ -91,6 +101,7 @@ function map:load(mapName)
 
   setmetatable(m, self)
   self.__index = self
+
 
   return m
 end

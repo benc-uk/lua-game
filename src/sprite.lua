@@ -22,7 +22,7 @@ function sprite:new(x, y, name)
 end
 
 -- Draw the sprite on the screen projected on the 2D plane
-function sprite:draw(camPos, camDir, camPlane, zbuffer)
+function sprite:draw(camPos, camDir, camPlane, zBuffer)
   -- Calculate sprite position relative to camera
   local spritePos = self.pos - camPos
   local aspect = love.graphics.getWidth() / love.graphics.getHeight()
@@ -77,13 +77,12 @@ function sprite:draw(camPos, camDir, camPlane, zbuffer)
     -- Calculate which slice of the sprite texture to use
     local texX = math.floor((x - (screenX - halfWidth)) / width * imageWidth)
 
-    -- Check if this vertical line is in front of the wall
-    if transY < zbuffer[x + 1] then
+    -- Check if this vertical line is visible in the z-buffer
+    if transY < zBuffer[x] then
       -- Create a quad for the vertical slice
       local quad = love.graphics.newQuad(texX, 0, 1, imageHeight, imageWidth, imageHeight)
-
-      -- Draw the slice
-      love.graphics.draw(self.image, quad, x, screenY, 0, 1, height / imageHeight)
+      -- Draw the vertical slice of the sprite
+      love.graphics.draw(self.image, quad, x, screenY, 0, 1, height / imageHeight, 0, 0)
     end
   end
 end

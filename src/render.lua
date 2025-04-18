@@ -168,15 +168,16 @@ local function castRay(pos, dir, map)
       -- Code for thin walls, if we hit a wall, we need to make some more checks & adjustments
       if cell ~= nil and cell.thin then
         local offsetPos = vec2:new(pos.x, pos.y)
+        local shiftAmount = 0.5
 
         -- Next pos is checking ahead 0.5 units in the direction of the ray
         local nextPos = vec2:new()
         if side == 0 then
-          nextPos.x = offsetPos.x + dir.x * (sideDistX - deltaDistX * 0.5)
-          nextPos.y = offsetPos.y + dir.y * (sideDistX - deltaDistX * 0.5)
+          nextPos.x = offsetPos.x + dir.x * (sideDistX - deltaDistX * (1 - shiftAmount))
+          nextPos.y = offsetPos.y + dir.y * (sideDistX - deltaDistX * (1 - shiftAmount))
         else
-          nextPos.x = offsetPos.x + dir.x * (sideDistY - deltaDistY * 0.5)
-          nextPos.y = offsetPos.y + dir.y * (sideDistY - deltaDistY * 0.5)
+          nextPos.x = offsetPos.x + dir.x * (sideDistY - deltaDistY * (1 - shiftAmount))
+          nextPos.y = offsetPos.y + dir.y * (sideDistY - deltaDistY * (1 - shiftAmount))
         end
 
         -- This is the *next* cell we hit, we need to check if it matches the current cell
@@ -186,15 +187,15 @@ local function castRay(pos, dir, map)
         if nextCellPos.x == gridPos.x and nextCellPos.y == gridPos.y then
           if side == 0 then
             if dir.x > 0 then
-              thinWallMove = ((gridPos.x + 0.5) - pos.x) / dir.x - ((gridPos.x) - pos.x) / dir.x
+              thinWallMove = ((gridPos.x + shiftAmount) - pos.x) / dir.x - ((gridPos.x) - pos.x) / dir.x
             else
-              thinWallMove = ((gridPos.x) - pos.x) / dir.x - ((gridPos.x + 0.5) - pos.x) / dir.x
+              thinWallMove = ((gridPos.x) - pos.x) / dir.x - ((gridPos.x + shiftAmount) - pos.x) / dir.x
             end
           else
             if dir.y > 0 then
-              thinWallMove = ((gridPos.y + 0.5) - pos.y) / dir.y - ((gridPos.y) - pos.y) / dir.y
+              thinWallMove = ((gridPos.y + shiftAmount) - pos.y) / dir.y - ((gridPos.y) - pos.y) / dir.y
             else
-              thinWallMove = ((gridPos.y) - pos.y) / dir.y - ((gridPos.y + 0.5) - pos.y) / dir.y
+              thinWallMove = ((gridPos.y) - pos.y) / dir.y - ((gridPos.y + shiftAmount) - pos.y) / dir.y
             end
           end
         end
@@ -219,11 +220,12 @@ local function castRay(pos, dir, map)
           end
         end
       end
+      -- END of thin wall code
     elseif cell == nil then
       -- Check for out of bounds, should not happen in a closed map
       hit = true
     end
-    -- END of thin wall code
+
 
     -- This is a simple counter to put a max distance on the ray
     steps = steps + 1
@@ -242,40 +244,42 @@ local function castRay(pos, dir, map)
   -- World position of the hit
   local worldPos = vec2:new(pos.x + dir.x * hitDist, pos.y + dir.y * hitDist)
   local cellHitPos = vec2:new(utils.frac(worldPos.x), utils.frac(worldPos.y))
+  local cell = map:get(gridPos.x, gridPos.y)
 
-  -- Check if the hit has part of a half open door (thin wall)
-  local doorOpenAmount = math.sin(love.timer.getTime() * 1.5) * 0.5 + 0.5
-  if thinWallMove > 0 then
-    -- If this is on the open part of the door, we need to carry on and cast a new ray
-    if side == 0 and cellHitPos.y > doorOpenAmount then
+  -- Check if the cell is transparent, we carry on
+  if cell.door then
+    if side == 0 and cellHitPos.y < cell.openAmount then
+      -- Recursion baby!
+      return castRay(worldPos, dir, map)
+    elseif side == 1 and cellHitPos.x < cell.openAmount then
       -- Recursion baby!
       return castRay(worldPos, dir, map)
     end
   end
 
+  -- If we hit a wall, add it to the hit list and return
   return {
     worldPos = worldPos,
     side = side,
-    cell = map:get(gridPos.x, gridPos.y),
+    cell = cell,
     cellHitPos = cellHitPos,
   }
 end
 
 -- This function draws the walls using raycasting
-local function walls(player, map)
-  local zBuffer = {}
-
+local function walls(player, map, zBuffer)
   -- Draw walls using raycasting
   for screenX = 0, love.graphics.getWidth() do
     -- Create a ray from the player position to the screen position
     local ray = player:getRay(screenX)
 
-    -- Cast the ray from player pos, out to find the first wall hit
+    -- Cast the ray from player pos, out to find the list of hits
     local hit = castRay(player.pos, ray, map)
 
-    if hit.cell then
+    if hit.cell and hit.cell.render then
       local hitDist = hit.worldPos - player.pos
       hitDist = hitDist:length()
+      zBuffer[screenX] = hitDist
 
       math.randomseed(hit.cell.id)
       local wallTexture = map.tileSet.images["wall_" .. math.random(1, 3)]
@@ -283,10 +287,9 @@ local function walls(player, map)
         wallTexture = map.tileSet.images["door"]
       end
 
-      zBuffer[screenX] = hitDist
-
       -- Correct the distance to the wall for the fish-eye effect
-      local wallHeightDist = hitDist * math.cos(math.atan2(ray.y, ray.x) - math.atan2(player.facing.y, player.facing.x))
+      local wallHeightDist = hitDist *
+          math.cos(math.atan2(ray.y, ray.x) - math.atan2(player.facing.y, player.facing.x))
 
       -- The height of the wall on the screen is inversely proportional to the distance
       local wallHeight = love.graphics.getHeight() / wallHeightDist
@@ -295,17 +298,13 @@ local function walls(player, map)
       local wallY = (love.graphics.getHeight() - wallHeight) / 2
 
       -- Light falls off with distance inverse square law and should be clamped to 0 - 1
-      local light = lume.clamp(1 / (hitDist ^ hitDist), 0, 1)
-      light = utils.lerp(light, 0.05)
+      local light = lume.clamp(3 / (hitDist ^ hitDist), 0, 3)
+      light = utils.lerp(light, 0.06)
 
       -- Texture mapping, get fraction of the world pos to use as the u coordinate of the texture
       local texU
       if hit.side == 0 then
-        local texOffset = 0
-        if hit.cell.thin then
-          texOffset = math.sin(love.timer.getTime() * 1.5) * 0.5 + 0.5
-        end
-        texU = hit.cellHitPos.y - texOffset
+        texU = hit.cellHitPos.y
       else
         texU = hit.cellHitPos.x
       end
@@ -316,11 +315,10 @@ local function walls(player, map)
       love.graphics.setColor(light, light, light)
       love.graphics.draw(wallTexture, wallSlice, screenX, wallY, 0, 1, wallHeight / tileHeight, 0, 0)
     else
-      -- If no wall hit, set the zbuffer to a large value
-      zBuffer[screenX] = 9999
+      -- If no wall hit, set the dist to the max distance
+      zBuffer[screenX] = math.huge
     end
   end
-
   return zBuffer
 end
 

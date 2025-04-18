@@ -2,6 +2,7 @@ local vec2 = require "vector"
 local magic = require "magic"
 
 local player = {}
+player.__index = player
 
 function player:new(x, y)
   local p = {
@@ -77,6 +78,15 @@ function player:getRay(screenX)
   )
 
   return ray:normalizeNew()
+end
+
+-- Fires a ray from the player's position and returns any cell within a distance of 1
+function player:getCellFacing(map)
+  local ray = vec2:new(self.facing.x, self.facing.y)
+  local cellX = math.floor(self.pos.x + ray.x * 0.8)
+  local cellY = math.floor(self.pos.y + ray.y * 0.8)
+
+  return map:get(cellX, cellY)
 end
 
 return player
