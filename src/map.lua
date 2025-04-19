@@ -17,6 +17,7 @@ function cell:new(x, y)
     openAmount = 0,
     grate = false,
     window = false,
+    window2 = false,
     item = nil,
     id = math.random(1000)
   }
@@ -96,6 +97,13 @@ function map:load(mapName)
         c.render = true
         c.thin = true
         c.window = true
+      end
+
+      if mapSymbol == "." then
+        c.blocking = true
+        c.render = true
+        c.thin = true
+        c.window2 = true
       end
 
       if mapSymbol == "|" or mapSymbol == "-" then

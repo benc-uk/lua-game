@@ -1,43 +1,9 @@
-local vec2             = require "vector"
-local magic            = require "magic"
-local imageCache       = require "image-cache"
+local vec2           = require "vector"
+local magic          = require "magic"
+local imageCache     = require "image-cache"
 
-local sprite           = {}
-
-local spriteImgCache   = imageCache:load("assets/sprites")
-
--- Draws a single vertical line of the wall at the depth given
-local spriteVertexcode = [[
-  uniform float hitDist;
-  uniform float maxDist;
-
-  vec4 position(mat4 transform_projection, vec4 vertex_position)
-  {
-    vec4 outpos = transform_projection * vertex_position;
-    outpos.z = hitDist / maxDist;
-    return outpos;
-  }
-]]
-
--- Draws a single vertical line of the wall
-local spritePixelcode  = [[
-  uniform float hitDist;
-
-  vec4 effect(vec4 color, Image tex, vec2 texture_coords, vec2 screen_coords)
-  {
-    vec4 texColor = texture2D(tex, texture_coords);
-
-    if (texColor.a < 0.1) {
-      discard;
-    }
-
-    float brightness = clamp(1.3 / (hitDist * hitDist) * 0.95 + 0.05, 0.0, 1.3);
-    return vec4(texColor.rgb * brightness, texColor.a);
-  }
-]]
-
-local spriteShader     = love.graphics.newShader(spriteVertexcode, spritePixelcode)
-spriteShader:send("maxDist", magic.maxDDA)
+local sprite         = {}
+local spriteImgCache = imageCache:load("assets/sprites")
 
 function sprite:new(x, y, name)
   local obj = {
@@ -55,9 +21,7 @@ function sprite:new(x, y, name)
 end
 
 -- Draw the sprite on the screen projected on the 2D plane
-function sprite:draw(camPos, camDir, camPlane)
-  love.graphics.setShader(spriteShader)
-
+function sprite:draw(camPos, camDir, camPlane, shader)
   -- Calculate sprite position relative to camera
   local spritePos = self.pos - camPos
   local aspect = love.graphics.getWidth() / love.graphics.getHeight()
@@ -70,7 +34,7 @@ function sprite:draw(camPos, camDir, camPlane)
   -- Don't draw sprites behind the camera!
   if transY <= 0 then return end
 
-  spriteShader:send("hitDist", transY)
+  shader:send("hitDist", transY)
 
   -- Precompute screen dimensions and scaling factors
   local screenWidth = love.graphics.getWidth()

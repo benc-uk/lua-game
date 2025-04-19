@@ -1,11 +1,10 @@
 ---@diagnostic disable: missing-fields
 
-local magic          = require "magic"
-local utils          = require "utils"
-local lume           = require "lib.rxi.lume"
-local vec2           = require "vector"
+local magic                = require "magic"
+local utils                = require "utils"
+local vec2                 = require "vector"
 
-local fcPixelcode    = [[
+local fcPixelcode          = [[
   uniform vec2 playerPos;
   uniform vec2 playerDir;
   uniform vec2 camPlane;
@@ -58,7 +57,7 @@ local fcPixelcode    = [[
   }
 ]]
 
-local fcVertexcode   = [[
+local fcVertexcode         = [[
   vec4 position(mat4 transform_projection, vec4 vertex_position)
   {
     return transform_projection * vertex_position;
@@ -66,7 +65,7 @@ local fcVertexcode   = [[
 ]]
 
 -- Draws a single vertical line of the wall at the depth given
-local wallVertexcode = [[
+local wallSpriteVertexcode = [[
   uniform float hitDist;
   uniform float maxDist;
 
@@ -79,7 +78,7 @@ local wallVertexcode = [[
 ]]
 
 -- Draws a single vertical line of the wall
-local wallPixelcode  = [[
+local wallSpritePixelcode  = [[
   uniform float hitDist;
   uniform float maxDepth;
 
@@ -87,23 +86,20 @@ local wallPixelcode  = [[
   {
     vec4 texColor = texture2D(tex, texture_coords);
 
-    if (texColor.a < 0.9) {
-      discard;
-    }
+    if (texColor.a < 0.1) { discard; }
 
     float brightness = clamp(1.3 / (hitDist * hitDist) * 0.95 + 0.05, 0.0, 1.3);
     return vec4(texColor.rgb * brightness, texColor.a);
   }
 ]]
 
-local tileWidth      = 32
-local tileHeight     = 32
-local zBuffer        = {}
+local tileWidth            = 32
+local tileHeight           = 32
 
 -- Initialize rendering settings here
 local function init(tileSetName, tileSize)
   FCShader = love.graphics.newShader(fcPixelcode, fcVertexcode)
-  WallShader = love.graphics.newShader(wallPixelcode, wallVertexcode)
+  WallShader = love.graphics.newShader(wallSpritePixelcode, wallSpriteVertexcode)
 
   WallShader:send("maxDist", magic.maxDDA)
 
@@ -116,10 +112,6 @@ local function init(tileSetName, tileSize)
 
   tileHeight = tileSize
   tileWidth = tileSize
-
-  for i = 0, love.graphics.getWidth() do
-    zBuffer[i] = math.huge
-  end
 end
 
 -- This function draws the floor and ceiling using a GLSL shader
@@ -141,19 +133,26 @@ end
 -- This function draws the sprites in the order of their distance from the player
 local function sprites(player, map)
   -- Order the sprites by distance to the player
+  -- NOTE: This could be removed if it becomes slow, and we rely on the depth buffer
+  -- But sorting allows for semi opaque & alpha in sprites to render correctly
   table.sort(map.sprites, function(a, b)
     return (a.pos - player.pos):length() > (b.pos - player.pos):length()
   end)
 
+  love.graphics.setShader(WallShader)
+  love.graphics.setDepthMode("lequal", false) -- would be true if removed sort
+
   for s = 1, #map.sprites do
     local sprite = map.sprites[s]
-    sprite:draw(player.pos, player.facing, player.camPlane, zBuffer)
+    sprite:draw(player.pos, player.facing, player.camPlane, WallShader)
   end
+
+  love.graphics.setShader()
 end
 
 -- Cast a ray from the player position in the direction of facing
--- And return the distance to the first wall hit
-local function castRay(pos, dir, map)
+-- And update the hit list with the cells we hit
+local function castRay(pos, dir, map, hitList)
   -- Current grid position
   local gridPos = { x = math.floor(pos.x), y = math.floor(pos.y) }
 
@@ -244,6 +243,7 @@ local function castRay(pos, dir, map)
         -- If we're in a different cell, we hit the side of the wall next to the thin wall
         -- NOTE: Thin walls should *ALWAYS* have walls either side of them, so this should be safe
         if (nextCellPos.x ~= gridPos.x or nextCellPos.y ~= gridPos.y) then
+          --local nextCell = map:get(nextCellPos.x, nextCellPos.y)
           if side == 0 then
             side = 1
             if (dir.y > 0) then
@@ -267,7 +267,6 @@ local function castRay(pos, dir, map)
       hit = true
     end
 
-
     -- This is a simple counter to put a max distance on the ray
     steps = steps + 1
     if steps >= magic.maxDDA then
@@ -287,19 +286,20 @@ local function castRay(pos, dir, map)
   local cellHitPos = vec2:new(utils.frac(worldPos.x), utils.frac(worldPos.y))
   local cell = map:get(gridPos.x, gridPos.y)
 
-  -- Check if the cell is an open door, we might need to carry on
-  if cell.door then
-    if side == 0 and cellHitPos.y < cell.openAmount then
-      -- Recursion baby!
-      return castRay(worldPos, dir, map)
-    elseif side == 1 and cellHitPos.x < cell.openAmount then
-      -- Recursion baby!
-      return castRay(worldPos, dir, map)
-    end
+  -- Check if the cell is thin, we might need to carry on
+  if cell.thin then
+    hitList[#hitList + 1] = {
+      worldPos = worldPos,
+      side = side,
+      cell = cell,
+      cellHitPos = cellHitPos,
+    }
+
+    return castRay(worldPos, dir, map, hitList)
   end
 
   -- If we hit a wall, return the cell and the side we hit
-  return {
+  hitList[#hitList + 1] = {
     worldPos = worldPos,
     side = side,
     cell = cell,
@@ -318,50 +318,56 @@ local function walls(player, map)
     local ray = player:getRay(screenX)
 
     -- Cast the ray from player pos, out to find the list of hits
-    local hit = castRay(player.pos, ray, map)
+    local hitList = {}
+    castRay(player.pos, ray, map, hitList)
 
-    if hit.cell and hit.cell.render then
-      local hitDist = hit.worldPos - player.pos
-      hitDist = hitDist:length()
-      --zBuffer[screenX] = hitDist
+    for i = #hitList, 1, -1 do
+      local hit = hitList[i]
 
-      math.randomseed(hit.cell.id)
-      local wallTexture = map.tileSet.images["wall_" .. math.random(1, 10)]
-      if hit.cell.thin then
-        wallTexture = map.tileSet.images["door"]
+      if hit.cell and hit.cell.render then
+        local hitDist = hit.worldPos - player.pos
+        hitDist = hitDist:length()
+
+        math.randomseed(hit.cell.id)
+        local wallTexture = map.tileSet.images["wall_" .. math.random(1, 10)]
+        if hit.cell.thin then
+          wallTexture = map.tileSet.images["door"]
+        end
+        if hit.cell.grate then
+          wallTexture = map.tileSet.images["grate2"]
+        end
+        if hit.cell.window then
+          wallTexture = map.tileSet.images["window"]
+        end
+        if hit.cell.window2 then
+          wallTexture = map.tileSet.images["window2"]
+        end
+
+        -- Correct the distance to the wall for the fish-eye effect
+        local wallHeightDist = hitDist *
+            math.cos(math.atan2(ray.y, ray.x) - math.atan2(player.facing.y, player.facing.x))
+
+        -- The height of the wall on the screen is inversely proportional to the distance
+        local wallHeight = love.graphics.getHeight() / wallHeightDist
+        -- Correct for the aspect ratio of the screen
+        wallHeight = wallHeight * (love.graphics.getWidth() / love.graphics.getHeight()) * magic.heightScale
+        local wallY = (love.graphics.getHeight() - wallHeight) / 2
+
+        -- Texture mapping, get fraction of the world pos to use as the u coordinate of the texture
+        local texU
+        if hit.side == 0 then
+          texU = hit.cellHitPos.y
+        else
+          texU = hit.cellHitPos.x
+        end
+
+        -- Call the shader to draw the wall slice (1 px wide) at the correct position & distance
+        WallShader:send("hitDist", hitDist)
+        local quad = love.graphics.newQuad(texU * tileWidth, 0, 1, tileHeight, tileWidth, tileHeight)
+        love.graphics.draw(wallTexture, quad, screenX, wallY, 0, 1, wallHeight / tileHeight, 0, 0)
       end
-      if hit.cell.grate then
-        wallTexture = map.tileSet.images["grate2"]
-      end
-      if hit.cell.window then
-        wallTexture = map.tileSet.images["window"]
-      end
-
-      -- Correct the distance to the wall for the fish-eye effect
-      local wallHeightDist = hitDist *
-          math.cos(math.atan2(ray.y, ray.x) - math.atan2(player.facing.y, player.facing.x))
-
-      -- The height of the wall on the screen is inversely proportional to the distance
-      local wallHeight = love.graphics.getHeight() / wallHeightDist
-      -- Correct for the aspect ratio of the screen
-      wallHeight = wallHeight * (love.graphics.getWidth() / love.graphics.getHeight()) * magic.heightScale
-      local wallY = (love.graphics.getHeight() - wallHeight) / 2
-
-      -- Texture mapping, get fraction of the world pos to use as the u coordinate of the texture
-      local texU
-      if hit.side == 0 then
-        texU = hit.cellHitPos.y
-      else
-        texU = hit.cellHitPos.x
-      end
-
-      WallShader:send("hitDist", hitDist)
-      local quad = love.graphics.newQuad(texU * tileWidth, 0, 1, tileHeight, tileWidth, tileHeight)
-      love.graphics.draw(wallTexture, quad, screenX, wallY, 0, 1, wallHeight / tileHeight, 0, 0)
     end
   end
-
-  love.graphics.setShader()
 end
 
 return {
