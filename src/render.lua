@@ -66,8 +66,8 @@ local fcVertexcode         = [[
 
 -- Draws a single vertical line of the wall at the depth given
 local wallSpriteVertexcode = [[
-  uniform float hitDist;
-  uniform float maxDist;
+  uniform highp float hitDist;
+  uniform highp float maxDist;
 
   vec4 position(mat4 transform_projection, vec4 vertex_position)
   {
@@ -79,8 +79,8 @@ local wallSpriteVertexcode = [[
 
 -- Draws a single vertical line of the wall
 local wallSpritePixelcode  = [[
-  uniform float hitDist;
-  uniform float maxDepth;
+  uniform highp float hitDist;
+  uniform highp float maxDepth;
 
   vec4 effect(vec4 color, Image tex, vec2 texture_coords, vec2 screen_coords)
   {
@@ -101,7 +101,7 @@ local function init(tileSetName, tileSize)
   FCShader = love.graphics.newShader(fcPixelcode, fcVertexcode)
   WallShader = love.graphics.newShader(wallSpritePixelcode, wallSpriteVertexcode)
 
-  WallShader:send("maxDist", magic.maxDDA)
+  WallShader:send("maxDist", 32.0) --magic.maxDDA)
 
   FloorImage = love.graphics.newImage("assets/tilesets/" .. tileSetName .. "/floor.png")
   FloorImage:setFilter("nearest", "nearest")
@@ -188,6 +188,7 @@ local function castRay(pos, dir, map, hitList)
   local side
   local steps = 0 -- A simple counter to limit the number of DDA loops
   local thinWallMove = 0
+  local doorSide = false
   while not hit and steps < magic.maxDDA do
     -- Jump to next grid square, either in x-direction, or in y-direction
     if sideDistX < sideDistY then
@@ -243,7 +244,11 @@ local function castRay(pos, dir, map, hitList)
         -- If we're in a different cell, we hit the side of the wall next to the thin wall
         -- NOTE: Thin walls should *ALWAYS* have walls either side of them, so this should be safe
         if (nextCellPos.x ~= gridPos.x or nextCellPos.y ~= gridPos.y) then
-          --local nextCell = map:get(nextCellPos.x, nextCellPos.y)
+          cell = map:get(gridPos.x, gridPos.y)
+          if cell and cell.door then
+            doorSide = true
+          end
+
           if side == 0 then
             side = 1
             if (dir.y > 0) then
@@ -293,6 +298,7 @@ local function castRay(pos, dir, map, hitList)
       side = side,
       cell = cell,
       cellHitPos = cellHitPos,
+      doorSide = doorSide,
     }
 
     return castRay(worldPos, dir, map, hitList)
@@ -304,6 +310,7 @@ local function castRay(pos, dir, map, hitList)
     side = side,
     cell = cell,
     cellHitPos = cellHitPos,
+    doorSide = doorSide,
   }
 end
 
@@ -324,24 +331,9 @@ local function walls(player, map)
     for i = #hitList, 1, -1 do
       local hit = hitList[i]
 
-      if hit.cell and hit.cell.render then
+      if hit.cell and hit.cell.render and hit.cell.texture then
         local hitDist = hit.worldPos - player.pos
         hitDist = hitDist:length()
-
-        math.randomseed(hit.cell.id)
-        local wallTexture = map.tileSet.images["wall_" .. math.random(1, 10)]
-        if hit.cell.thin then
-          wallTexture = map.tileSet.images["door"]
-        end
-        if hit.cell.grate then
-          wallTexture = map.tileSet.images["grate2"]
-        end
-        if hit.cell.window then
-          wallTexture = map.tileSet.images["window"]
-        end
-        if hit.cell.window2 then
-          wallTexture = map.tileSet.images["window2"]
-        end
 
         -- Correct the distance to the wall for the fish-eye effect
         local wallHeightDist = hitDist *
@@ -361,10 +353,15 @@ local function walls(player, map)
           texU = hit.cellHitPos.x
         end
 
+        local tex = hit.cell.texture
+        if hit.doorSide then
+          tex = map.tileSet.images["door_sides"]
+        end
+
         -- Call the shader to draw the wall slice (1 px wide) at the correct position & distance
         WallShader:send("hitDist", hitDist)
         local quad = love.graphics.newQuad(texU * tileWidth, 0, 1, tileHeight, tileWidth, tileHeight)
-        love.graphics.draw(wallTexture, quad, screenX, wallY, 0, 1, wallHeight / tileHeight, 0, 0)
+        love.graphics.draw(tex, quad, screenX, wallY, 0, 1, wallHeight / tileHeight, 0, 0)
       end
     end
   end

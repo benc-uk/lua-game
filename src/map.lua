@@ -14,12 +14,9 @@ function cell:new(x, y)
     blocking = false,
     thin = false,
     door = false,
-    openAmount = 0,
-    grate = false,
-    window = false,
-    window2 = false,
+    texture = nil,
     item = nil,
-    id = math.random(1000)
+    id = math.random(10000)
   }
 
   setmetatable(c, self)
@@ -56,6 +53,13 @@ function map:load(mapName)
 
   -- Sprites held in their own array for easy of rendering/sorting
   m.sprites = {}
+  m.name = "Demo Dungeon"
+  m.tileSetName = mapData.tileset or "default"
+  m.width = mapData.width
+  m.height = mapData.height
+  m.playerStartCell = { mapData.playerStartCell[1], mapData.playerStartCell[2] }
+  m.playerStartDir = mapData.playerStartDir or 0
+  m.tileSet = imageCache:load("assets/tilesets/" .. m.tileSetName)
 
   -- Loop over mapData.layout populate the cells
   for rowIndex = 1, #mapData.layout do
@@ -67,11 +71,14 @@ function map:load(mapName)
       if mapSymbol == "#" then
         c.render = true
         c.blocking = true
+        math.randomseed(c.id)
+        c.texture = m.tileSet.images["wall_" .. math.random(1, 10)]
       end
 
       if mapSymbol == "b" then
         c.item = item:new(c, "tank", 1)
         m.sprites[#m.sprites + 1] = c.item.sprite
+        c.blocking = true
       end
 
       if mapSymbol == "t" then
@@ -85,45 +92,22 @@ function map:load(mapName)
         m.sprites[#m.sprites + 1] = c.item.sprite
       end
 
-      if mapSymbol == ":" then
-        c.blocking = true
-        c.render = true
-        c.thin = true
-        c.grate = true
-      end
-
-      if mapSymbol == ";" then
-        c.blocking = true
-        c.render = true
-        c.thin = true
-        c.window = true
-      end
-
-      if mapSymbol == "." then
-        c.blocking = true
-        c.render = true
-        c.thin = true
-        c.window2 = true
-      end
-
       if mapSymbol == "|" or mapSymbol == "-" then
         c.thin = true
         c.render = true
         c.door = true
-        c.openAmount = 0.0
         c.blocking = false
+        c.texture = m.tileSet.images["door"]
+      end
+
+      if mapSymbol == ":" then
+        c.thin = true
+        c.render = true
+        c.blocking = true
+        c.texture = m.tileSet.images["grate"]
       end
     end
   end
-
-  m.name = "Demo Dungeon"
-  m.tileSetName = mapData.tileset or "default"
-  m.width = mapData.width
-  m.height = mapData.height
-  m.playerStartCell = { mapData.playerStartCell[1], mapData.playerStartCell[2] }
-  m.playerStartDir = mapData.playerStartDir or 0
-
-  m.tileSet = imageCache:load("assets/tilesets/" .. m.tileSetName)
 
   setmetatable(m, self)
   self.__index = self

@@ -16,12 +16,12 @@ function love.conf(conf)
   conf.window.width = 1280
   conf.window.height = 720
   conf.window.depth = 24
-  conf.window.title = "Lua Dungeon"
+  conf.window.title = "Lua Starbase XI"
   conf.window.icon = "assets/icons/main.png"
   conf.window.resizable = false
   conf.window.fullscreentype = "exclusive"
   conf.gammacorrect = false
-  conf.window.vsync = 0
+  conf.window.vsync = 1
 
   if IS_DEBUG then
     conf.window.x = 20
