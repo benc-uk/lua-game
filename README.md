@@ -1,4 +1,4 @@
-# ⚔️ Lua Dungeon
+# ⚔️ Lua 3D Game
 
 A first person game/engine made with [Love2D](https://love2d.org/). Heavily WIP.
 
@@ -6,14 +6,16 @@ My second experiment with raycasting, this time I'm using Lua/Love2D. I want to 
 
 It's using standard raycasting techniques such as those outlined in the excellent [Lode's Computer Graphics Tutorial](https://lodev.org/cgtutor/raycasting.html)
 
-Everything is done in software and the CPU, with a notable exception of the floors & ceilings. These are rendered using the GPU using a GLSL shader, due to Love2D's extremely slow support for getPixel/setPixel operations
+The raycasting calculations and sprite positioning are done in software with classic raycasting approach, then sent to the GPU using shaders to draw wall strips & sprites. Floors and ceilings are done with a fullscreen shader entirely on the GPU.
 
 Current features:
 
 - Textured walls
+- Textured floors and ceilings
 - Sprites for items, creatures and things
+- Thin walls with see through sections, partial alpha
+- Doors
 - Light falloff
-- Textured floors & ceilings using the GPU
 
 ![screen3](./docs/screen3.png)
 
