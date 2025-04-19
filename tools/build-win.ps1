@@ -31,8 +31,8 @@ $exeFileName = Join-Path $outputPath "out.exe"
 
 # Remove existing files
 if (Test-Path $zipFileName) {
-    Remove-Item $zipFileName -Force
-    Remove-Item $exeFileName -Force
+    Remove-Item $zipFileName -Force -ErrorAction SilentlyContinue
+    Remove-Item $exeFileName -Force -ErrorAction SilentlyContinue
 }
 
 echo "📚 Compressing project to: $zipFileName"

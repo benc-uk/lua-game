@@ -53,10 +53,7 @@ jobs:
         uses: actions/setup-node@v4
 
       - name: Build using love.js
-        run: |
-          npx love.js ./src/ ./dist/web -c -t "Lua Dungeon Game"
-          cp ./dist/love.css ./dist/web/theme/love.css
-          cp ./dist/favicon.ico ./dist/web/
+        run: ./tools/build-web.sh
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
