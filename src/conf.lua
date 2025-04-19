@@ -15,6 +15,7 @@ math.randomseed(os.time())
 function love.conf(conf)
   conf.window.width = 1280
   conf.window.height = 720
+  conf.window.depth = 24
   conf.window.title = "Lua Dungeon"
   conf.window.icon = "assets/icons/main.png"
   conf.window.resizable = false

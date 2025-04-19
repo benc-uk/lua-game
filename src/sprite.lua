@@ -1,10 +1,43 @@
-local vec2 = require "vector"
-local magic = require "magic"
-local imageCache = require "image-cache"
+local vec2             = require "vector"
+local magic            = require "magic"
+local imageCache       = require "image-cache"
 
-local sprite = {}
+local sprite           = {}
 
-local spriteImgCache = imageCache:load("assets/sprites")
+local spriteImgCache   = imageCache:load("assets/sprites")
+
+-- Draws a single vertical line of the wall at the depth given
+local spriteVertexcode = [[
+  uniform float hitDist;
+  uniform float maxDist;
+
+  vec4 position(mat4 transform_projection, vec4 vertex_position)
+  {
+    vec4 outpos = transform_projection * vertex_position;
+    outpos.z = hitDist / maxDist;
+    return outpos;
+  }
+]]
+
+-- Draws a single vertical line of the wall
+local spritePixelcode  = [[
+  uniform float hitDist;
+
+  vec4 effect(vec4 color, Image tex, vec2 texture_coords, vec2 screen_coords)
+  {
+    vec4 texColor = texture2D(tex, texture_coords);
+
+    if (texColor.a < 0.1) {
+      discard;
+    }
+
+    float brightness = clamp(1.3 / (hitDist * hitDist) * 0.95 + 0.05, 0.0, 1.3);
+    return vec4(texColor.rgb * brightness, texColor.a);
+  }
+]]
+
+local spriteShader     = love.graphics.newShader(spriteVertexcode, spritePixelcode)
+spriteShader:send("maxDist", magic.maxDDA)
 
 function sprite:new(x, y, name)
   local obj = {
@@ -22,7 +55,9 @@ function sprite:new(x, y, name)
 end
 
 -- Draw the sprite on the screen projected on the 2D plane
-function sprite:draw(camPos, camDir, camPlane, zBuffer)
+function sprite:draw(camPos, camDir, camPlane)
+  love.graphics.setShader(spriteShader)
+
   -- Calculate sprite position relative to camera
   local spritePos = self.pos - camPos
   local aspect = love.graphics.getWidth() / love.graphics.getHeight()
@@ -34,6 +69,8 @@ function sprite:draw(camPos, camDir, camPlane, zBuffer)
 
   -- Don't draw sprites behind the camera!
   if transY <= 0 then return end
+
+  spriteShader:send("hitDist", transY)
 
   -- Precompute screen dimensions and scaling factors
   local screenWidth = love.graphics.getWidth()
@@ -48,9 +85,6 @@ function sprite:draw(camPos, camDir, camPlane, zBuffer)
   -- Calculate sprite dimensions on screen
   local height = math.abs(screenHeight * (1 / transY)) * self.scale * heightScale
   local width = height --* (1 - magic.FOV) -- Assuming square sprite
-  if self.name == "tank" then
-    width = width * 0.8
-  end
 
   -- Calculate the visible range
   local halfWidth = width / 2
@@ -62,32 +96,15 @@ function sprite:draw(camPos, camDir, camPlane, zBuffer)
 
   -- Move the sprite down to place it on the ground
   local moveDown = height * (1 / self.scale - 1) * 0.5
-  local screenY = halfScreenHeight - height / 2 + moveDown
-
-  -- Compute brightness factor
-  local bright = 1 - (spritePos:length() / 5)
-  bright = math.max(0.1, math.min(1, bright))
-
-  -- Draw sprite by vertical slices
+  local screenY = (halfScreenHeight) + moveDown
   local imageWidth = self.image:getWidth()
   local imageHeight = self.image:getHeight()
 
-  local a = 1
-  if self.alpha < 1 then a = self.alpha * bright end
-  love.graphics.setColor(bright, bright, bright, a)
-
-  for x = startX, endX do
-    -- Calculate which slice of the sprite texture to use
-    local texX = math.floor((x - (screenX - halfWidth)) / width * imageWidth)
-
-    -- Check if this vertical line is visible in the z-buffer
-    if transY < zBuffer[x] then
-      -- Create a quad for the vertical slice
-      local quad = love.graphics.newQuad(texX, 0, 1, imageHeight, imageWidth, imageHeight)
-      -- Draw the vertical slice of the sprite
-      love.graphics.draw(self.image, quad, x, screenY, 0, 1, height / imageHeight, 0, 0)
-    end
-  end
+  local quad = love.graphics.newQuad(0, 0, imageWidth, imageHeight, imageWidth, imageHeight)
+  love.graphics.setColor(1, 1, 1, 1)
+  love.graphics.draw(self.image, quad, screenX, screenY, 0, width / imageWidth, height / imageHeight,
+    imageWidth / 2,
+    imageHeight / 2)
 end
 
 return sprite

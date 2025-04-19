@@ -73,14 +73,16 @@ function love.mousemoved(_, _, dx)
 end
 
 function love.draw()
-  love.graphics.setColor(0, 0, 0, 1)
-  love.graphics.clear()
+  love.graphics.clear(0, 0, 0, 1, true, true)
 
   render.floorCeil(player)
 
   render.walls(player, map)
 
-  --render.sprites(player, map)
+  render.sprites(player, map)
+
+  love.graphics.setColor(1, 1, 1, 1)
+  love.graphics.setShader()
 
   -- Show the FPS
   love.graphics.setFont(love.graphics.newFont(22))

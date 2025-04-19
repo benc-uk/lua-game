@@ -15,6 +15,8 @@ function cell:new(x, y)
     thin = false,
     door = false,
     openAmount = 0,
+    grate = false,
+    window = false,
     item = nil,
     id = math.random(1000)
   }
@@ -82,8 +84,18 @@ function map:load(mapName)
         m.sprites[#m.sprites + 1] = c.item.sprite
       end
 
-      if mapSymbol == "." then
+      if mapSymbol == ":" then
         c.blocking = true
+        c.render = true
+        c.thin = true
+        c.grate = true
+      end
+
+      if mapSymbol == ";" then
+        c.blocking = true
+        c.render = true
+        c.thin = true
+        c.window = true
       end
 
       if mapSymbol == "|" or mapSymbol == "-" then
