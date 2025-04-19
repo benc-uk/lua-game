@@ -81,9 +81,6 @@ function love.draw()
 
   render.sprites(player, map)
 
-  love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.setShader()
-
   -- Show the FPS
   love.graphics.setFont(love.graphics.newFont(22))
   love.graphics.setColor(0, 0, 0)

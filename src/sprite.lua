@@ -34,21 +34,13 @@ function sprite:draw(camPos, camDir, camPlane, shader)
   -- Don't draw sprites behind the camera!
   if transY <= 0 then return end
 
-  shader:send("hitDist", transY)
-
-  -- Precompute screen dimensions and scaling factors
-  local screenWidth = love.graphics.getWidth()
-  local screenHeight = love.graphics.getHeight()
-  local halfScreenWidth = screenWidth / 2
-  local halfScreenHeight = screenHeight / 2
-  local heightScale = aspect * magic.heightScale
-
   -- Calculate screen position
-  local screenX = halfScreenWidth * (1 + transX / transY)
+  local screenWidth = love.graphics.getWidth()
+  local screenX = (screenWidth / 2) * (1 + transX / transY)
 
   -- Calculate sprite dimensions on screen
-  local height = math.abs(screenHeight * (1 / transY)) * self.scale * heightScale
-  local width = height --* (1 - magic.FOV) -- Assuming square sprite
+  local height = math.abs(love.graphics.getHeight() * (1 / transY)) * self.scale * aspect * magic.heightScale
+  local width = height -- Assuming square sprites
 
   -- Calculate the visible range
   local halfWidth = width / 2
@@ -59,13 +51,12 @@ function sprite:draw(camPos, camDir, camPlane, shader)
   if startX > screenWidth or endX < 0 then return end
 
   -- Move the sprite down to place it on the ground
-  local moveDown = height * (1 / self.scale - 1) * 0.5
-  local screenY = (halfScreenHeight) + moveDown
+  local screenY = (love.graphics.getHeight() / 2) + (height * (1 / self.scale - 1) * 0.5)
   local imageWidth = self.image:getWidth()
   local imageHeight = self.image:getHeight()
 
+  shader:send("hitDist", transY)
   local quad = love.graphics.newQuad(0, 0, imageWidth, imageHeight, imageWidth, imageHeight)
-  love.graphics.setColor(1, 1, 1, 1)
   love.graphics.draw(self.image, quad, screenX, screenY, 0, width / imageWidth, height / imageHeight,
     imageWidth / 2,
     imageHeight / 2)

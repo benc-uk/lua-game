@@ -101,7 +101,7 @@ local function init(tileSetName, tileSize)
   FCShader = love.graphics.newShader(fcPixelcode, fcVertexcode)
   WallShader = love.graphics.newShader(wallSpritePixelcode, wallSpriteVertexcode)
 
-  WallShader:send("maxDist", 32.0) --magic.maxDDA)
+  WallShader:send("maxDist", magic.maxDDA)
 
   FloorImage = love.graphics.newImage("assets/tilesets/" .. tileSetName .. "/floor.png")
   FloorImage:setFilter("nearest", "nearest")
@@ -130,9 +130,9 @@ local function floorCeil(player)
   love.graphics.setShader()
 end
 
--- This function draws the sprites in the order of their distance from the player
+-- This function draws the sprites
 local function sprites(player, map)
-  -- Order the sprites by distance to the player
+  -- Sort the sprites by distance to the player
   -- NOTE: This could be removed if it becomes slow, and we rely on the depth buffer
   -- But sorting allows for semi opaque & alpha in sprites to render correctly
   table.sort(map.sprites, function(a, b)
@@ -360,8 +360,8 @@ local function walls(player, map)
 
         -- Call the shader to draw the wall slice (1 px wide) at the correct position & distance
         WallShader:send("hitDist", hitDist)
-        local quad = love.graphics.newQuad(texU * tileWidth, 0, 1, tileHeight, tileWidth, tileHeight)
-        love.graphics.draw(tex, quad, screenX, wallY, 0, 1, wallHeight / tileHeight, 0, 0)
+        local wallStrip = love.graphics.newQuad(texU * tileWidth, 0, 1, tileHeight, tileWidth, tileHeight)
+        love.graphics.draw(tex, wallStrip, screenX, wallY, 0, 1, wallHeight / tileHeight, 0, 0)
       end
     end
   end
