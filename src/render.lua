@@ -8,9 +8,15 @@ local fcPixelcode          = [[
   uniform vec2 playerPos;
   uniform vec2 playerDir;
   uniform vec2 camPlane;
-  uniform sampler2D floorTex;
+  uniform sampler2D floorTex1;
+  uniform sampler2D floorTex2;
   uniform sampler2D ceilTex;
   uniform float heightScale;
+
+  float random (vec2 st) {
+    // See: https://thebookofshaders.com/10/
+    return fract(sin(dot(st.xy, vec2(12.9898,78.233)))*43758.5453123);
+  }
 
   vec4 effect(vec4 color, Image tex, vec2 texture_coords, vec2 screen_coords)
   {
@@ -44,15 +50,27 @@ local fcPixelcode          = [[
     vec2 texCoord = vec2(floorX - floor(floorX), floorY - floor(floorY));
     vec4 texColor;
 
+    float floorBrightAdjust = 1.0;
     // Determine whether to draw the ceiling or the floor
     if (p < 0.0) {
       texColor = texture2D(ceilTex, texCoord);
     } else {
-      texColor = texture2D(floorTex, texCoord);
+      // Randomly select between two floor textures based on the position
+      float r = random(floor(vec2(floorX, floorY)));
+      if (r < 0.3) {
+        texColor = texture2D(floorTex2, texCoord);
+      } else {
+        texColor = texture2D(floorTex1, texCoord);
+      }
+
+      // Adjust brightness randomly for variety
+      if(mod(r * 10.0, 4.0) < 1.0) {
+        floorBrightAdjust = 0.8;
+      }
     }
 
     // Apply distance-based shading for realism
-    float brightness = clamp(1.0 / (rowDistance * rowDistance) * 0.95 + 0.05, 0.0, 1.0);
+    float brightness = clamp(1.3 / (rowDistance * rowDistance) * 0.95 + 0.05, 0.0, 1.3) * floorBrightAdjust;
     return vec4(texColor.rgb * brightness, 1);
   }
 ]]
@@ -103,12 +121,9 @@ local function init(tileSetName, tileSize)
 
   WallShader:send("maxDist", magic.maxDDA)
 
-  FloorImage = love.graphics.newImage("assets/tilesets/" .. tileSetName .. "/floor.png")
-  FloorImage:setFilter("nearest", "nearest")
-  FloorImage:setWrap("repeat", "repeat")
+  FloorImage1 = love.graphics.newImage("assets/tilesets/" .. tileSetName .. "/floor_1.png")
+  FloorImage2 = love.graphics.newImage("assets/tilesets/" .. tileSetName .. "/floor_2.png")
   CeilImage = love.graphics.newImage("assets/tilesets/" .. tileSetName .. "/ceil.png")
-  CeilImage:setFilter("nearest", "nearest")
-  CeilImage:setWrap("repeat", "repeat")
 
   tileHeight = tileSize
   tileWidth = tileSize
@@ -122,7 +137,8 @@ local function floorCeil(player)
   FCShader:send("playerDir", { player.facing.x, player.facing.y })
   FCShader:send("camPlane", { player.camPlane.x, player.camPlane.y })
   FCShader:send("heightScale", magic.heightScale)
-  FCShader:send("floorTex", FloorImage)
+  FCShader:send("floorTex1", FloorImage1)
+  FCShader:send("floorTex2", FloorImage2)
   FCShader:send("ceilTex", CeilImage)
 
   love.graphics.setShader(FCShader)

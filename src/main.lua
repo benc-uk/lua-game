@@ -7,11 +7,11 @@ local player    = {}
 
 
 function love.load()
+  love.graphics.setDefaultFilter("nearest", "nearest")
+
   map = mapLib:load("level-1")
-
-  player = playerLib:new(map.playerStartCell[1] + 0.5, map.playerStartCell[2] + 0.5)
+  player = playerLib:new(map.playerStartCell.x + 0.5, map.playerStartCell.y + 0.5)
   player:rotate(map.playerStartDir * 90)
-
   render.init(map.tileSetName, map.tileSet.size.width)
 end
 

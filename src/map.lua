@@ -57,7 +57,7 @@ function map:load(mapName)
   m.tileSetName = mapData.tileset or "default"
   m.width = mapData.width
   m.height = mapData.height
-  m.playerStartCell = { mapData.playerStartCell[1], mapData.playerStartCell[2] }
+  m.playerStartCell = {}
   m.playerStartDir = mapData.playerStartDir or 0
   m.tileSet = imageCache:load("assets/tilesets/" .. m.tileSetName)
 
@@ -67,6 +67,11 @@ function map:load(mapName)
     for colIndex = 1, #dataRow do
       local c = m.cells[colIndex][rowIndex]
       local mapSymbol = dataRow[colIndex]
+
+      if mapSymbol == "@" then
+        m.playerStartCell.x = colIndex
+        m.playerStartCell.y = rowIndex
+      end
 
       if mapSymbol == "#" then
         c.render = true
@@ -86,7 +91,6 @@ function map:load(mapName)
         m.sprites[#m.sprites + 1] = c.item.sprite
       end
 
-
       if mapSymbol == "c" then
         c.item = item:new(c, "crate", 0.8)
         m.sprites[#m.sprites + 1] = c.item.sprite
@@ -105,6 +109,11 @@ function map:load(mapName)
         c.render = true
         c.blocking = true
         c.texture = m.tileSet.images["grate"]
+      end
+
+      if mapSymbol == ">" then
+        c.render = false
+        c.blocking = false
       end
     end
   end
