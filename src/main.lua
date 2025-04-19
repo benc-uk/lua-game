@@ -80,7 +80,7 @@ function love.draw()
 
   render.walls(player, map)
 
-  render.sprites(player, map)
+  --render.sprites(player, map)
 
   -- Show the FPS
   love.graphics.setFont(love.graphics.newFont(22))

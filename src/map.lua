@@ -67,12 +67,18 @@ function map:load(mapName)
       end
 
       if mapSymbol == "b" then
-        c.item = item:new(c, "crate", 0.3)
+        c.item = item:new(c, "tank", 1)
         m.sprites[#m.sprites + 1] = c.item.sprite
       end
 
+      if mapSymbol == "t" then
+        c.item = item:new(c, "terminal", 0.7)
+        m.sprites[#m.sprites + 1] = c.item.sprite
+      end
+
+
       if mapSymbol == "c" then
-        c.item = item:new(c, "crate", 0.3)
+        c.item = item:new(c, "crate", 0.8)
         m.sprites[#m.sprites + 1] = c.item.sprite
       end
 

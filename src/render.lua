@@ -1,11 +1,11 @@
 ---@diagnostic disable: missing-fields
 
-local magic        = require "magic"
-local utils        = require "utils"
-local lume         = require "lib.rxi.lume"
-local vec2         = require "vector"
+local magic          = require "magic"
+local utils          = require "utils"
+local lume           = require "lib.rxi.lume"
+local vec2           = require "vector"
 
-local pixelcode    = [[
+local fcPixelcode    = [[
   uniform vec2 playerPos;
   uniform vec2 playerDir;
   uniform vec2 camPlane;
@@ -58,22 +58,54 @@ local pixelcode    = [[
   }
 ]]
 
-local vertexcode   = [[
+local fxVertexcode   = [[
   vec4 position(mat4 transform_projection, vec4 vertex_position)
   {
     return transform_projection * vertex_position;
   }
 ]]
 
-local tileWidth    = 32
-local tileHeight   = 32
-local zBuffer      = {}
-local wallCanvas   = love.graphics.newCanvas(love.graphics.getWidth(), love.graphics.getHeight())
-local spriteCanvas = love.graphics.newCanvas(love.graphics.getWidth(), love.graphics.getHeight())
+-- Draws a single vertical line of the wall at the depth given
+local wallVertexcode = [[
+  uniform float hitDist;
+  uniform float maxDist;
+
+  vec4 position(mat4 transform_projection, vec4 vertex_position)
+  {
+    vec4 outpos = transform_projection * vertex_position;
+    outpos.z = hitDist / maxDist;
+    return outpos;
+  }
+]]
+
+-- Draws a single vertical line of the wall
+local wallPixelcode  = [[
+  uniform float wallHeight;
+  uniform float hitDist;
+  uniform float maxDepth;
+
+  vec4 effect(vec4 color, Image tex, vec2 texture_coords, vec2 screen_coords)
+  {
+    vec2 texCoord = vec2(texture_coords.x, texture_coords.y);
+    vec4 texColor = texture2D(tex, texCoord);
+
+    float brightness = clamp(1.3 / (hitDist * hitDist) * 0.95 + 0.05, 0.0, 1.3);
+    return vec4(texColor.rgb * brightness, 1);
+  }
+]]
+
+local tileWidth      = 32
+local tileHeight     = 32
+local zBuffer        = {}
+local spriteCanvas   = love.graphics.newCanvas(love.graphics.getWidth(), love.graphics.getHeight())
 
 -- Initialize rendering settings here
 local function init(tileSetName, tileSize)
-  FCShader = love.graphics.newShader(pixelcode, vertexcode)
+  FCShader = love.graphics.newShader(fcPixelcode, fxVertexcode)
+  WallShader = love.graphics.newShader(wallPixelcode, wallVertexcode)
+
+  WallShader:send("maxDist", magic.maxDDA)
+
   FloorImage = love.graphics.newImage("assets/tilesets/" .. tileSetName .. "/floor.png")
   FloorImage:setFilter("nearest", "nearest")
   FloorImage:setWrap("repeat", "repeat")
@@ -87,8 +119,6 @@ local function init(tileSetName, tileSize)
   for i = 0, love.graphics.getWidth() do
     zBuffer[i] = math.huge
   end
-
-  wallCanvas = love.graphics.newCanvas(love.graphics.getWidth(), love.graphics.getHeight())
 end
 
 -- This function draws the floor and ceiling using a GLSL shader
@@ -263,7 +293,7 @@ local function castRay(pos, dir, map)
   local cellHitPos = vec2:new(utils.frac(worldPos.x), utils.frac(worldPos.y))
   local cell = map:get(gridPos.x, gridPos.y)
 
-  -- Check if the cell is transparent, we carry on
+  -- Check if the cell is an open door, we might need to carry on
   if cell.door then
     if side == 0 and cellHitPos.y < cell.openAmount then
       -- Recursion baby!
@@ -274,7 +304,7 @@ local function castRay(pos, dir, map)
     end
   end
 
-  -- If we hit a wall, add it to the hit list and return
+  -- If we hit a wall, return the cell and the side we hit
   return {
     worldPos = worldPos,
     side = side,
@@ -285,8 +315,10 @@ end
 
 -- This function draws the walls using raycasting
 local function walls(player, map)
-  love.graphics.setCanvas(wallCanvas)
-  love.graphics.clear()
+  -- love.graphics.setCanvas(wallCanvas)
+  -- love.graphics.clear()
+
+  love.graphics.setShader(WallShader)
 
   -- Draw walls using raycasting
   for screenX = 0, love.graphics.getWidth() do
@@ -318,8 +350,8 @@ local function walls(player, map)
       local wallY = (love.graphics.getHeight() - wallHeight) / 2
 
       -- Light falls off with distance inverse square law and should be clamped to 0 - 1
-      local light = lume.clamp(1 / (hitDist ^ hitDist), 0, 1)
-      light = utils.lerp(light, 0.06)
+      -- local light = lume.clamp(1 / (hitDist ^ hitDist), 0, 1)
+      -- light = utils.lerp(light, 0.06)
 
       -- Texture mapping, get fraction of the world pos to use as the u coordinate of the texture
       local texU
@@ -330,20 +362,27 @@ local function walls(player, map)
       end
 
       -- One pixel vertical slice of the texture
-      local wallSlice = love.graphics.newQuad(math.floor(texU * tileWidth), 0, 1,
+      -- local wallSlice = love.graphics.newQuad(math.floor(texU * tileWidth), 0, 1,
+      --   tileHeight, tileWidth, tileHeight)
+      -- love.graphics.setColor(light, light, light)
+      -- love.graphics.draw(wallTexture, wallSlice, screenX, wallY, 0, 1, wallHeight / tileHeight, 0, 0)
+
+      WallShader:send("hitDist", hitDist)
+      local quad = love.graphics.newQuad(texU * tileWidth, 0, 1,
         tileHeight, tileWidth, tileHeight)
-      love.graphics.setColor(light, light, light)
-      love.graphics.draw(wallTexture, wallSlice, screenX, wallY, 0, 1, wallHeight / tileHeight, 0, 0)
-    else
-      -- If no wall hit, set the dist to the max distance
-      zBuffer[screenX] = math.huge
+
+      love.graphics.draw(wallTexture, quad, screenX, wallY, 0, 1, wallHeight / tileHeight, 0, 0)
     end
+    -- If no wall hit, set the dist to the max distance
+    --zBuffer[screenX] = math.huge
+    --end
   end
 
+  love.graphics.setShader()
   -- Reset the canvas to the default
-  love.graphics.setCanvas()
-  love.graphics.setColor(1, 1, 1)
-  love.graphics.draw(wallCanvas)
+  -- love.graphics.setCanvas()
+  -- love.graphics.setColor(1, 1, 1)
+  -- love.graphics.draw(wallCanvas)
 end
 
 return {
