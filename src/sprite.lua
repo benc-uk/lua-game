@@ -47,7 +47,7 @@ function sprite:draw(camPos, camDir, camPlane, zBuffer)
 
   -- Calculate sprite dimensions on screen
   local height = math.abs(screenHeight * (1 / transY)) * self.scale * heightScale
-  local width = height -- Assuming square sprite
+  local width = height * magic.FOV * aspect -- Assuming square sprite
 
   -- Calculate the visible range
   local halfWidth = width / 2

@@ -1,6 +1,6 @@
 return {
-  heightScale = 0.68,
-  FOV = 0.60,
+  heightScale = 0.55,
+  FOV = 0.785,
   maxDDA = 32,
   version = "0.0.1"
 }

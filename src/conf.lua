@@ -13,13 +13,14 @@ end
 math.randomseed(os.time())
 
 function love.conf(conf)
-  conf.window.width = 1024
-  conf.window.height = 768
+  conf.window.width = 1280
+  conf.window.height = 720
   conf.window.title = "Lua Dungeon"
   conf.window.icon = "assets/icons/main.png"
   conf.window.resizable = false
-  conf.window.fullscreentype = "desktop"
+  conf.window.fullscreentype = "exclusive"
   conf.gammacorrect = false
+  conf.window.vsync = 0
 
   if IS_DEBUG then
     conf.window.x = 20

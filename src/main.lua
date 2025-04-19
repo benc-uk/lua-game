@@ -4,7 +4,8 @@ local render    = require "render"
 
 local map       = {}
 local player    = {}
-local zBuffer   = {}
+
+
 function love.load()
   map = mapLib:load("level-1")
 
@@ -12,10 +13,6 @@ function love.load()
   player:rotate(map.playerStartDir * 90)
 
   render.init(map.tileSetName, map.tileSet.size.width)
-
-  for i = 0, love.graphics.getWidth() do
-    zBuffer[i] = math.huge
-  end
 end
 
 function love.update()
@@ -81,16 +78,16 @@ function love.draw()
 
   render.floorCeil(player)
 
-  render.walls(player, map, zBuffer)
+  render.walls(player, map)
 
-  render.sprites(player, map, zBuffer)
+  render.sprites(player, map)
 
   -- Show the FPS
   love.graphics.setFont(love.graphics.newFont(22))
   love.graphics.setColor(0, 0, 0)
-  love.graphics.print("FPS: " .. love.timer.getFPS(), love.graphics.getWidth() - 90, 5)
+  love.graphics.print("FPS: " .. love.timer.getFPS(), love.graphics.getWidth() - 120, 5)
   love.graphics.setColor(1, 1, 1)
-  love.graphics.print("FPS: " .. love.timer.getFPS(), love.graphics.getWidth() - 92, 3)
+  love.graphics.print("FPS: " .. love.timer.getFPS(), love.graphics.getWidth() - 122, 3)
 end
 
 function love.keypressed(key)
@@ -102,7 +99,7 @@ function love.keypressed(key)
     if love.window.getFullscreen() then
       love.window.setFullscreen(false)
     else
-      love.window.setFullscreen(true, "exclusive")
+      love.window.setFullscreen(true)
     end
   end
 end

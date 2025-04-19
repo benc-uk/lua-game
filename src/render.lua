@@ -1,11 +1,11 @@
 ---@diagnostic disable: missing-fields
 
-local magic      = require "magic"
-local utils      = require "utils"
-local lume       = require "lib.rxi.lume"
-local vec2       = require "vector"
+local magic        = require "magic"
+local utils        = require "utils"
+local lume         = require "lib.rxi.lume"
+local vec2         = require "vector"
 
-local pixelcode  = [[
+local pixelcode    = [[
   uniform vec2 playerPos;
   uniform vec2 playerDir;
   uniform vec2 camPlane;
@@ -58,15 +58,18 @@ local pixelcode  = [[
   }
 ]]
 
-local vertexcode = [[
+local vertexcode   = [[
   vec4 position(mat4 transform_projection, vec4 vertex_position)
   {
     return transform_projection * vertex_position;
   }
 ]]
 
-local tileWidth  = 32
-local tileHeight = 32
+local tileWidth    = 32
+local tileHeight   = 32
+local zBuffer      = {}
+local wallCanvas   = love.graphics.newCanvas(love.graphics.getWidth(), love.graphics.getHeight())
+local spriteCanvas = love.graphics.newCanvas(love.graphics.getWidth(), love.graphics.getHeight())
 
 -- Initialize rendering settings here
 local function init(tileSetName, tileSize)
@@ -80,6 +83,12 @@ local function init(tileSetName, tileSize)
 
   tileHeight = tileSize
   tileWidth = tileSize
+
+  for i = 0, love.graphics.getWidth() do
+    zBuffer[i] = math.huge
+  end
+
+  wallCanvas = love.graphics.newCanvas(love.graphics.getWidth(), love.graphics.getHeight())
 end
 
 -- This function draws the floor and ceiling using a GLSL shader
@@ -97,17 +106,25 @@ local function floorCeil(player)
 end
 
 -- This function draws the sprites in the order of their distance from the player
-local function sprites(player, map, zBuffer)
+local function sprites(player, map)
   -- Order the sprites by distance to the player
   table.sort(map.sprites, function(a, b)
     return (a.pos - player.pos):length() > (b.pos - player.pos):length()
   end)
 
   -- Draw the sprites
+  love.graphics.setCanvas(spriteCanvas)
+  love.graphics.clear()
+
   for s = 1, #map.sprites do
     local sprite = map.sprites[s]
     sprite:draw(player.pos, player.facing, player.camPlane, zBuffer)
   end
+
+  -- Reset the canvas to the default
+  love.graphics.setCanvas()
+  love.graphics.setColor(1, 1, 1)
+  love.graphics.draw(spriteCanvas)
 end
 
 -- Cast a ray from the player position in the direction of facing
@@ -267,7 +284,10 @@ local function castRay(pos, dir, map)
 end
 
 -- This function draws the walls using raycasting
-local function walls(player, map, zBuffer)
+local function walls(player, map)
+  love.graphics.setCanvas(wallCanvas)
+  love.graphics.clear()
+
   -- Draw walls using raycasting
   for screenX = 0, love.graphics.getWidth() do
     -- Create a ray from the player position to the screen position
@@ -282,7 +302,7 @@ local function walls(player, map, zBuffer)
       zBuffer[screenX] = hitDist
 
       math.randomseed(hit.cell.id)
-      local wallTexture = map.tileSet.images["wall_" .. math.random(1, 3)]
+      local wallTexture = map.tileSet.images["wall_" .. math.random(1, 10)]
       if hit.cell.thin then
         wallTexture = map.tileSet.images["door"]
       end
@@ -298,7 +318,7 @@ local function walls(player, map, zBuffer)
       local wallY = (love.graphics.getHeight() - wallHeight) / 2
 
       -- Light falls off with distance inverse square law and should be clamped to 0 - 1
-      local light = lume.clamp(3 / (hitDist ^ hitDist), 0, 3)
+      local light = lume.clamp(1 / (hitDist ^ hitDist), 0, 1)
       light = utils.lerp(light, 0.06)
 
       -- Texture mapping, get fraction of the world pos to use as the u coordinate of the texture
@@ -319,7 +339,11 @@ local function walls(player, map, zBuffer)
       zBuffer[screenX] = math.huge
     end
   end
-  return zBuffer
+
+  -- Reset the canvas to the default
+  love.graphics.setCanvas()
+  love.graphics.setColor(1, 1, 1)
+  love.graphics.draw(wallCanvas)
 end
 
 return {

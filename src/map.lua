@@ -67,12 +67,12 @@ function map:load(mapName)
       end
 
       if mapSymbol == "b" then
-        c.item = item:new(c, "barrel")
+        c.item = item:new(c, "crate", 0.3)
         m.sprites[#m.sprites + 1] = c.item.sprite
       end
 
       if mapSymbol == "c" then
-        c.item = item:new(c, "chest")
+        c.item = item:new(c, "crate", 0.3)
         m.sprites[#m.sprites + 1] = c.item.sprite
       end
 
@@ -84,8 +84,8 @@ function map:load(mapName)
         c.thin = true
         c.render = true
         c.door = true
-        c.openAmount = 0.6
-        c.blocking = true
+        c.openAmount = 0.0
+        c.blocking = false
       end
     end
   end
@@ -101,7 +101,6 @@ function map:load(mapName)
 
   setmetatable(m, self)
   self.__index = self
-
 
   return m
 end
