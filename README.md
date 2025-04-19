@@ -17,7 +17,8 @@ Current features:
 - Doors
 - Light falloff
 
-![screen3](./docs/screen3.png)
+![Screenshot of the game](./docs/screen4a.png)
+![Another screenshot of the game](./docs/screen4b.png)
 
 ## 🕹️ Controls
 
@@ -34,7 +35,7 @@ I don't know if I'll keep this as it often behaves strangely compared to the nat
 
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/benc-uk/lua-dungeon/build-deploy.yaml?style=for-the-badge&link=https%3A%2F%2Fgithub.com%2Fbenc-uk%2Flua-dungeon%2Factions%2Fworkflows%2Fbuild-deploy.yaml)
 
-Binaries are built as part of CI when main branch is updated, navigate to latest run (I can't find a way to permalink to this) and download the 'Lua Dungeon Windows Build' zip file, extract and run the lua-dungeon.exe file. It's safe!
+Binaries are built as part of CI when main branch is updated, navigate to latest run (I can't find a way to permalink to this) and download the 'Lua Dungeon Windows Build' zip file, extract and run the lua-game.exe file. It's safe!
 
 ## 🛠️ Building
 
@@ -62,6 +63,6 @@ Kinda the same as above, but run `./tools/build-linux.sh` you can run the script
 
 I used several sources of information and assets:
 
-- Graphics, sprites & texturess - https://opengameart.org/content/dungeon-crawl-32x32-tiles-supplemental
+- Graphics, sprites & textures - https://little-martian.itch.io/retro-texture-pack
 - Raycasting - https://lodev.org/cgtutor/raycasting.html
 - Raycasting More - https://github.com/wernsey/lodev-enhance
