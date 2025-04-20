@@ -1,6 +1,7 @@
 local mapLib    = require "map"
 local playerLib = require "player"
 local render    = require "render"
+local sounds    = require "sounds"
 
 local map       = {}
 local player    = {}
@@ -9,13 +10,23 @@ local player    = {}
 function love.load()
   love.graphics.setDefaultFilter("nearest", "nearest")
 
+  print("🚀 Starting game...")
+
   map = mapLib:load("level-1")
+
+
   player = playerLib:new(map.playerStartCell.x + 0.5, map.playerStartCell.y + 0.5)
   player:rotate(map.playerStartDir * 90)
+  print("🙍‍♂️ Player created and placed: " .. player.pos)
+
   render.init(map.tileSetName, map.tileSet.size.width)
+
+  print("♻️ Starting game loop...")
+
+  sounds.bgLoop:play()
 end
 
-function love.update()
+function love.update(dt)
   if love.keyboard.isDown("left") or love.keyboard.isDown("a") then
     player:rotate(-2)
   elseif love.keyboard.isDown("right") or love.keyboard.isDown("d") then
@@ -37,8 +48,13 @@ function love.update()
 
   if love.keyboard.isDown("space") then
     local c = player:getCellFacing(map)
-    if c ~= nil and c.door then
-      c.blocking = not c.blocking
+    if c ~= nil and c.door and c.fsm then
+      local fsm = c.fsm
+      if fsm.currentState.name == "closed" then
+        fsm:changeState("opening")
+      elseif fsm.currentState.name == "open" then
+        fsm:changeState("closing")
+      end
     end
   end
 
@@ -50,6 +66,10 @@ function love.update()
     -- Move back to the last position
     player.pos = player.pos - player.facing * player.speed * love.timer.getDelta()
     player.speed = 0
+  end
+
+  for _, fsm in ipairs(map.fsmList) do
+    fsm:update(dt)
   end
 end
 

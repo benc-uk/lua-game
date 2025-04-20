@@ -126,4 +126,9 @@ function vec2:__tostring()
   return string.format("vec2(%f, %f)", self.x, self.y)
 end
 
+-- Concat method for string representation
+function vec2.__concat(str, self)
+  return str .. string.format("vec2(%f, %f)", self.x, self.y)
+end
+
 return vec2

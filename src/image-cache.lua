@@ -5,7 +5,7 @@ function imageCache:load(path)
 
   -- Count files in the directory
   local files = love.filesystem.getDirectoryItems(path)
-  print("Caching images: " .. path)
+  print("📚 Caching images: " .. path)
   assert(#files > 0, "No files found in directory: " .. path)
 
   ic.filterMode = "nearest"

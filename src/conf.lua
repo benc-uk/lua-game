@@ -20,7 +20,7 @@ function love.conf(conf)
   conf.window.icon = "assets/icons/main.png"
   conf.window.resizable = false
   conf.window.fullscreentype = "exclusive"
-  conf.gammacorrect = false
+  conf.gammacorrect = true
   conf.window.vsync = 1
 
   if IS_DEBUG then

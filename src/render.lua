@@ -50,7 +50,7 @@ local fcPixelcode          = [[
     vec2 texCoord = vec2(floorX - floor(floorX), floorY - floor(floorY));
     vec4 texColor;
 
-    float floorBrightAdjust = 1.0;
+    vec3 floorAdjust = vec3(1.0, 1.0, 1.0);
     // Determine whether to draw the ceiling or the floor
     if (p < 0.0) {
       texColor = texture2D(ceilTex, texCoord);
@@ -65,13 +65,13 @@ local fcPixelcode          = [[
 
       // Adjust brightness randomly for variety
       if(mod(r * 10.0, 4.0) < 1.0) {
-        floorBrightAdjust = 0.8;
+        floorAdjust = vec3(0.75, 0.8, 0.8);
       }
     }
 
-    // Apply distance-based shading for realism
-    float brightness = clamp(1.3 / (rowDistance * rowDistance) * 0.95 + 0.05, 0.0, 1.3) * floorBrightAdjust;
-    return vec4(texColor.rgb * brightness, 1);
+    // Apply distance-based shading
+    float brightness = clamp(1.5 / (rowDistance * rowDistance), 0.0, 1.5);
+    return vec4(texColor.rgb * floorAdjust * brightness, 1);
   }
 ]]
 
@@ -106,7 +106,7 @@ local wallSpritePixelcode  = [[
 
     if (texColor.a < 0.1) { discard; }
 
-    float brightness = clamp(1.3 / (hitDist * hitDist) * 0.95 + 0.05, 0.0, 1.3);
+    float brightness = clamp(2.0 / (hitDist * hitDist), 0.0, 2.0);
     return vec4(texColor.rgb * brightness, texColor.a);
   }
 ]]
@@ -261,7 +261,7 @@ local function castRay(pos, dir, map, hitList)
         -- NOTE: Thin walls should *ALWAYS* have walls either side of them, so this should be safe
         if (nextCellPos.x ~= gridPos.x or nextCellPos.y ~= gridPos.y) then
           cell = map:get(gridPos.x, gridPos.y)
-          if cell and cell.door then
+          if cell then
             doorSide = true
           end
 
@@ -347,7 +347,7 @@ local function walls(player, map)
     for i = #hitList, 1, -1 do
       local hit = hitList[i]
 
-      if hit.cell and hit.cell.render and hit.cell.texture then
+      if hit.cell and hit.cell.render and #hit.cell.textures > 0 then
         local hitDist = hit.worldPos - player.pos
         hitDist = hitDist:length()
 
@@ -369,9 +369,21 @@ local function walls(player, map)
           texU = hit.cellHitPos.x
         end
 
-        local tex = hit.cell.texture
+        -- Special texture overrides for doors and animated textures
+        local tex = hit.cell.textures[1]
         if hit.doorSide then
           tex = map.tileSet.images["door_sides"]
+        end
+        if #hit.cell.textures > 1 and hit.cell.animateSpeed > 0 then
+          -- loop through the textures using timer
+          local texIndex = math.floor(love.timer.getTime() * hit.cell.animateSpeed * #hit.cell.textures) %
+              #hit.cell.textures + 1
+          tex = hit.cell.textures[texIndex]
+        end
+
+        if hit.cell.fsm then
+          -- If the cell has a fsm, use the current texture
+          tex = hit.cell.fsm:getStateData().currentTexture
         end
 
         -- Call the shader to draw the wall slice (1 px wide) at the correct position & distance
