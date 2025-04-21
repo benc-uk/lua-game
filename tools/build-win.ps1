@@ -40,7 +40,7 @@ Compress-Archive -Path $srcPath\* -DestinationPath $zipFileName -Force
 
 # Copy love.exe together with the .love file
 echo "🔨 Building executable: $exeFileName"
-Get-Content $lovePath,$zipFileName -AsByteStream | Set-Content $exeFileName -AsByteStream -Force
+cmd /c copy /b $lovePath+$zipFileName $exeFileName
 
 # Show the size of the executable in MB rounded to 2 decimal places
 $size = "{0:N2} MB" -f ((Get-Item $exeFileName).length / 1MB)

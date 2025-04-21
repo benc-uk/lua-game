@@ -1,20 +1,12 @@
 local sounds = {
-  bgLoop = love.audio.newSource("assets/sound/bg-loop.wav", "static"),
-  door = love.audio.newSource("assets/sound/door-openclose.wav", "static"),
-  doorOpen = love.audio.newSource("assets/sound/door-open.wav", "static"),
-  doorClosed = love.audio.newSource("assets/sound/door-closed.wav", "static")
+  bgLoop = love.audio.newSource("assets/sound/bg_loop.wav", "static"),
+  door = love.audio.newSource("assets/sound/door.wav", "static"),
+  doorOpen = love.audio.newSource("assets/sound/door_open.wav", "static"),
+  doorClosed = love.audio.newSource("assets/sound/door_closed.wav", "static")
 }
 
 love.audio.setEffect("verb", {
   type = "reverb"
-})
-
-love.audio.setEffect("delay", {
-  type = "echo",
-  delay = 0.2,
-  tapdelay = 0.4,
-  feedback = 0.03,
-  damping = 0.99,
 })
 
 sounds.bgLoop:setLooping(true)
