@@ -9,6 +9,7 @@ function imageCache:load(path)
   assert(#files > 0, "No files found in directory: " .. path)
 
   ic.filterMode = "nearest"
+  ic.wrapMode = "clampzero"
   ic.images = {}
 
   -- Loop over files and load images
@@ -43,6 +44,14 @@ function imageCache:setFilter(mode)
 
   for _, image in pairs(self.images) do
     image:setFilter(mode, mode)
+  end
+end
+
+function imageCache:setWrap(wrap)
+  self.wrapMode = wrap
+
+  for _, image in pairs(self.images) do
+    image:setWrap(wrap, wrap)
   end
 end
 

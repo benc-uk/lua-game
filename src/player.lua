@@ -1,21 +1,34 @@
 local vec2 = require "vector"
 local magic = require "magic"
+local stateMachine = require "state"
 
 local player = {}
 player.__index = player
 
-function player:new(x, y)
-  local p = {
-    -- Constants
-    maxSpeed = 3,
-    acceleration = 4,
 
-    pos = vec2:new(x, y),
+function player:new(x, y, world)
+  local shape = love.physics.newCircleShape(0.25)
+  local body = love.physics.newBody(world, 0, 0, "dynamic")
+  body:setMass(1)
+  body:setPosition(x, y)
+  body:setLinearDamping(8.8)
+  body:setAngularDamping(6.8)
+  local _ = love.physics.newFixture(body, shape, 1)
+
+  local p = {
+    moveForce = 0.4,
+    turnSpeed = math.rad(0.5), -- radians per second
+
     facing = vec2:new(1, 0),
     camPlane = vec2:new(0, magic.FOV), -- Camera plane perpendicular to the facing direction
     angle = 0,
-    speed = 0,
+
+    state = stateMachine:new(),
+    body = body,
   }
+
+  p.state:addState("idle", {})
+  p.state:changeState("idle")
 
   setmetatable(p, self)
   self.__index = self
@@ -23,50 +36,57 @@ function player:new(x, y)
   return p
 end
 
-function player:rotate(a)
-  self.angle = self.angle + a
-  if self.angle >= 360 then
-    self.angle = self.angle - 360
-  elseif self.angle < 0 then
-    self.angle = self.angle + 360
+function player:update(dt, map, oldPos)
+  -- Check if the player is inside a wall or out of bounds
+  local x, y = self.body:getPosition()
+  local cell = map:get(math.floor(x), math.floor(y))
+  if (cell == nil or cell.blocking) then
+    self.body:setPosition(oldPos.x, oldPos.y)
   end
 
-  self.facing.x = math.cos(math.rad(self.angle))
-  self.facing.y = math.sin(math.rad(self.angle))
+  -- Update the state machine
+  self.state:update(dt)
+
+  self:setAngle(self.body:getAngle())
+end
+
+function player:setAngle(a)
+  self.angle = a
+  if self.angle < 0 then
+    self.angle = self.angle + math.pi * 2
+  end
+  if self.angle > math.pi * 2 then
+    self.angle = self.angle - math.pi * 2
+  end
+  self.body:setAngle(self.angle)
+
+  self.facing.x = math.cos(self.angle)
+  self.facing.y = math.sin(self.angle)
   self.camPlane.x = -self.facing.y * magic.FOV
   self.camPlane.y = self.facing.x * magic.FOV
 end
 
-function player:move(dt)
-  self.pos = self.pos + self.facing * self.speed * dt
+function player:moveFwdBack(dt, dir)
+  self.body:applyForce(
+    self.facing.x * dir * dt * self.moveForce,
+    self.facing.y * dir * dt * self.moveForce
+  )
 end
 
-function player:accel()
-  self.speed = self.speed + (self.acceleration * love.timer.getDelta())
-  if self.speed >= self.maxSpeed then
-    self.speed = self.maxSpeed
-  end
+function player:turn(dt, dir)
+  self.body:applyTorque(dir * dt * self.turnSpeed)
 end
 
-function player:decel()
-  self.speed = self.speed - (self.acceleration * love.timer.getDelta())
-  if self.speed <= -self.maxSpeed then
-    self.speed = -self.maxSpeed
-  end
+function player:strafe(dt, dir)
+  self.body:applyForce(
+    self.facing.y * dir * dt * self.moveForce,
+    -self.facing.x * dir * dt * self.moveForce
+  )
 end
 
-function player:comeToStop()
-  if self.speed > 0 then
-    self.speed = self.speed - (self.acceleration * 2 * love.timer.getDelta())
-    if self.speed < 0 then
-      self.speed = 0
-    end
-  elseif self.speed < 0 then
-    self.speed = self.speed + (self.acceleration * 2 * love.timer.getDelta())
-    if self.speed > 0 then
-      self.speed = 0
-    end
-  end
+function player:getPosition()
+  local x, y = self.body:getPosition()
+  return vec2:new(x, y)
 end
 
 function player:getRay(screenX)
@@ -82,9 +102,10 @@ end
 
 -- Fires a ray from the player's position and returns any cell within a distance of 1
 function player:getCellFacing(map)
+  local x, y = self.body:getPosition()
   local ray = vec2:new(self.facing.x, self.facing.y)
-  local cellX = math.floor(self.pos.x + ray.x * 0.8)
-  local cellY = math.floor(self.pos.y + ray.y * 0.8)
+  local cellX = math.floor(x + ray.x * 0.8)
+  local cellY = math.floor(y + ray.y * 0.8)
 
   return map:get(cellX, cellY)
 end

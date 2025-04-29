@@ -1,37 +1,10 @@
-local json         = require "lib.rxi.json"
-local imageCache   = require "image-cache"
-local item         = require "item"
-local stateMachine = require "state"
-local sounds       = require "sounds"
+local json       = require "lib.rxi.json"
+local imageCache = require "image-cache"
+local item       = require "item"
 
-local map          = {}
-local cell         = {}
-cell.__index       = cell
+local cell       = require "cell"
 
-function cell:new(x, y)
-  local c = {
-    x = x,
-    y = y,
-    render = false,
-    blocking = false,
-    thin = false,
-    door = false,
-    textures = {},
-    animateSpeed = 0,
-    item = nil,
-    id = math.random(10000),
-    fsm = nil,
-  }
-
-  setmetatable(c, self)
-  self.__index = self
-
-  return c
-end
-
-function cell:__tostring()
-  return string.format("Cell(%d, %d)", self.x, self.y)
-end
+local map        = {}
 
 function map:load(mapName)
   print("💾 Loading map: " .. mapName)
@@ -58,28 +31,42 @@ function map:load(mapName)
 
   -- Sprites held in their own array for easy of rendering/sorting
   m.sprites = {}
-  m.name = "Demo Dungeon"
+  m.name = "Untitled Level"
   m.tileSetName = mapData.tileset or "default"
   m.width = mapData.width
   m.height = mapData.height
   m.playerStartCell = {}
-  m.playerStartDir = mapData.playerStartDir or 0
+  m.playerStartDir = mapData.playerStartDir or 3
   m.tileSet = imageCache:load("assets/tilesets/" .. m.tileSetName)
-  m.fsmList = {}
+  m.stateMachines = {}
 
   -- Loop over mapData.layout populate the cells
-  for rowIndex = 1, #mapData.layout do
-    local dataRow = mapData.layout[rowIndex]
-    for colIndex = 1, #dataRow do
-      local c = m.cells[colIndex][rowIndex]
-      local mapSymbol = dataRow[colIndex]
+  for row = 1, #mapData.layout do
+    local dataRow = mapData.layout[row]
+    if #dataRow ~= m.width then
+      error("Map row " .. row .. " has incorrect width: " .. #dataRow .. ", expected: " .. m.width)
+    end
 
-      if mapSymbol == "@" then
-        m.playerStartCell.x = colIndex
-        m.playerStartCell.y = rowIndex
+    for col = 1, #dataRow do
+      local c = m.cells[col][row]
+
+      -- It's a string so use sub to get the character
+      local symbol = dataRow:sub(col, col)
+
+      -- Set the cell's position
+      c.x = col
+      c.y = row
+
+      -- Set the cell's render and blocking properties based on the map symbol
+      c.render = false
+      c.blocking = false
+
+      if symbol == "@" then
+        m.playerStartCell.x = col
+        m.playerStartCell.y = row
       end
 
-      if mapSymbol == "#" then
+      if symbol == "#" then
         c.render = true
         c.blocking = true
         math.randomseed(c.id)
@@ -102,108 +89,34 @@ function map:load(mapName)
         end
       end
 
-      if mapSymbol == "b" then
+      if symbol == "b" then
         c.item = item:new(c, "tank", 1)
         m.sprites[#m.sprites + 1] = c.item.sprite
         c.blocking = true
       end
 
-      if mapSymbol == "t" then
+      if symbol == "t" then
         c.item = item:new(c, "terminal", 0.7)
         m.sprites[#m.sprites + 1] = c.item.sprite
       end
 
-      if mapSymbol == "c" then
+      if symbol == "c" then
         c.item = item:new(c, "crate", 0.8)
         m.sprites[#m.sprites + 1] = c.item.sprite
       end
 
-      if mapSymbol == "h" then
+      if symbol == "h" then
         c.item = item:new(c, "hook", 1)
         m.sprites[#m.sprites + 1] = c.item.sprite
       end
 
-      if mapSymbol == "w" then
+      if symbol == "w" then
         c.item = item:new(c, "wires", 1)
         m.sprites[#m.sprites + 1] = c.item.sprite
       end
 
-      if mapSymbol == "|" or mapSymbol == "-" then
-        c.thin = true
-        c.render = true
-        c.door = true
-        c.blocking = false
-        c.textures[1] = m.tileSet.images["door"]
-        c.textures[2] = m.tileSet.images["door_opena"]
-        c.textures[3] = m.tileSet.images["door_openb"]
-        c.textures[4] = m.tileSet.images["door_openc"]
-        c.textures[5] = m.tileSet.images["door_opend"]
-
-        c.fsm = stateMachine:new()
-
-        c.fsm:addState("closed", {
-          onEnter = function(_, data, noSound)
-            c.blocking = true;
-            data.currentTexture = c.textures[1]
-            if not noSound then sounds.doorClosed:play() end
-          end
-        })
-
-        c.fsm:addState("open", {
-          onEnter = function(_, data)
-            c.blocking = false
-            data.currentTexture = c.textures[5]
-            sounds.doorOpen:play()
-          end
-        })
-
-        c.fsm:addState("opening", {
-          onEnter = function(_, data)
-            c.blocking = true
-            data.textureIndex = 1
-            data.currentTexture = c.textures[data.textureIndex]
-            data.timeToNextFrame = 0.2
-            sounds.door:play()
-          end,
-          onUpdate = function(fsm, data, dt)
-            data.timeToNextFrame = data.timeToNextFrame - dt
-            if data.timeToNextFrame < 0 then
-              data.textureIndex = data.textureIndex + 1
-              if data.textureIndex > #c.textures then
-                data.textureIndex = 5
-                fsm:changeState("open")
-              end
-
-              data.currentTexture = c.textures[data.textureIndex]
-              data.timeToNextFrame = 0.2
-            end
-          end
-        })
-
-        c.fsm:addState("closing", {
-          onEnter = function(_, data)
-            c.blocking = true
-            data.textureIndex = 5
-            data.currentTexture = c.textures[data.textureIndex]
-            data.timeToNextFrame = 0.2
-            sounds.door:play()
-          end,
-          onUpdate = function(fsm, data, dt)
-            data.timeToNextFrame = data.timeToNextFrame - dt
-            if data.timeToNextFrame < 0 then
-              data.textureIndex = data.textureIndex - 1
-              if data.textureIndex < 1 then
-                fsm:changeState("closed")
-              end
-
-              data.currentTexture = c.textures[data.textureIndex]
-              data.timeToNextFrame = 0.2
-            end
-          end
-        })
-
-        c.fsm:changeState("closed", true)
-        m.fsmList[#m.fsmList + 1] = c.fsm
+      if symbol == "|" or symbol == "-" then
+        m.cells[col][row] = cell:newDoor(col, row, m, false)
       end
     end
   end

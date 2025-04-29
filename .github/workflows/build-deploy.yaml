@@ -85,5 +85,5 @@ jobs:
       - name: Upload Windows build
         uses: actions/upload-artifact@v4
         with:
-          name: Lua Dungeon Windows Build
+          name: Lua Game Windows Build
           path: ./dist/lua-game.exe

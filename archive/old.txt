@@ -1,0 +1,14 @@
+function player:rotate(dt, dir)
+  local a = self.turnSpeed * dt * dir
+  self.angle = self.angle + a
+  if self.angle >= 360 then
+    self.angle = self.angle - 360
+  elseif self.angle < 0 then
+    self.angle = self.angle + 360
+  end
+
+  self.facing.x = math.cos(math.rad(self.angle))
+  self.facing.y = math.sin(math.rad(self.angle))
+  self.camPlane.x = -self.facing.y * magic.FOV
+  self.camPlane.y = self.facing.x * magic.FOV
+end

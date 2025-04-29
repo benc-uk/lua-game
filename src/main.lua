@@ -2,22 +2,20 @@ local mapLib    = require "map"
 local playerLib = require "player"
 local render    = require "render"
 local sounds    = require "sounds"
+local controls  = require "controls"
 
 local map       = {}
 local player    = {}
-
+local world     = love.physics.newWorld(0, 0, true)
 
 function love.load()
-  love.graphics.setDefaultFilter("nearest", "nearest")
-
   print("🚀 Starting game...")
 
   map = mapLib:load("level-1")
 
-
-  player = playerLib:new(map.playerStartCell.x + 0.5, map.playerStartCell.y + 0.5)
-  player:rotate(map.playerStartDir * 90)
-  print("🙍‍♂️ Player created and placed: " .. player.pos)
+  player = playerLib:new(map.playerStartCell.x + 0.5, map.playerStartCell.y + 0.5, world)
+  player:setAngle(map.playerStartDir * (math.pi / 2))
+  print("🙍‍♂️ Player created and placed: " .. player:getPosition())
 
   render.init(map.tileSetName, map.tileSet.size.width)
 
@@ -27,50 +25,18 @@ function love.load()
 end
 
 function love.update(dt)
-  if love.keyboard.isDown("left") or love.keyboard.isDown("a") then
-    player:rotate(-2)
-  elseif love.keyboard.isDown("right") or love.keyboard.isDown("d") then
-    player:rotate(2)
-  end
-
-  local movingKey = false
-  if love.keyboard.isDown("up") or love.keyboard.isDown("w") then
-    player:accel()
-    movingKey = true
-  elseif love.keyboard.isDown("down") or love.keyboard.isDown("s") then
-    player:decel()
-    movingKey = true
-  end
-
-  if not movingKey then
-    player:comeToStop()
-  end
-
-  if love.keyboard.isDown("space") then
-    local c = player:getCellFacing(map)
-    if c ~= nil and c.door and c.fsm then
-      local fsm = c.fsm
-      if fsm.currentState.name == "closed" then
-        fsm:changeState("opening")
-      elseif fsm.currentState.name == "open" then
-        fsm:changeState("closing")
-      end
-    end
-  end
-
-  player:move(love.timer.getDelta())
-
-  -- Check inside a wall or out of bounds
-  local cell = map:get(player.pos.x, player.pos.y)
-  if (cell == nil or cell.blocking) then
-    -- Move back to the last position
-    player.pos = player.pos - player.facing * player.speed * love.timer.getDelta()
-    player.speed = 0
-  end
-
-  for _, fsm in ipairs(map.fsmList) do
+  for _, fsm in ipairs(map.stateMachines) do
     fsm:update(dt)
   end
+
+  controls.update(dt, player, map)
+
+  -- Update the physics world
+  local oldPos = player:getPosition()
+
+  world:update(dt)
+
+  player:update(dt, map, oldPos)
 end
 
 function love.mousepressed(_, _, button)
@@ -83,12 +49,6 @@ function love.mousepressed(_, _, button)
 
     love.mouse.setGrabbed(true)
     love.mouse.setRelativeMode(true)
-  end
-end
-
-function love.mousemoved(_, _, dx)
-  if love.mouse.isGrabbed() then
-    player:rotate(dx * 0.1)
   end
 end
 
@@ -107,6 +67,13 @@ function love.draw()
   love.graphics.print("FPS: " .. love.timer.getFPS(), love.graphics.getWidth() - 120, 5)
   love.graphics.setColor(1, 1, 1)
   love.graphics.print("FPS: " .. love.timer.getFPS(), love.graphics.getWidth() - 122, 3)
+
+  -- Debug player
+  local playerPos = player:getPosition()
+  love.graphics.setColor(1, 1, 1)
+  love.graphics.print("Player: " .. playerPos.x .. ", " .. playerPos.y, 10, 10)
+  love.graphics.print("Angle: " .. player.body:getAngle(), 10, 30)
+  love.graphics.print("Speed: " .. player.body:getLinearVelocity(), 10, 50)
 end
 
 function love.keypressed(key)
@@ -121,4 +88,10 @@ function love.keypressed(key)
       love.window.setFullscreen(true)
     end
   end
+
+  controls.keyDown(key)
+end
+
+function love.keyreleased(key)
+  controls.keyUp(key)
 end

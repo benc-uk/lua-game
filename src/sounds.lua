@@ -9,6 +9,9 @@ love.audio.setEffect("verb", {
   type = "reverb"
 })
 
+-- TEMPORARY: Disable sound for now
+love.audio.setVolume(0.0)
+
 sounds.bgLoop:setLooping(true)
 sounds.bgLoop:setPitch(0.6)
 

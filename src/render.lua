@@ -116,6 +116,8 @@ local tileHeight           = 32
 
 -- Initialize rendering settings here
 local function init(tileSetName, tileSize)
+  love.graphics.setDefaultFilter("nearest", "nearest")
+
   FCShader = love.graphics.newShader(fcPixelcode, fcVertexcode)
   WallShader = love.graphics.newShader(wallSpritePixelcode, wallSpriteVertexcode)
 
@@ -133,7 +135,8 @@ end
 local function floorCeil(player)
   love.graphics.setDepthMode("always", false)
 
-  FCShader:send("playerPos", { player.pos.x, player.pos.y })
+  local playPos = player:getPosition()
+  FCShader:send("playerPos", { playPos.x, playPos.y })
   FCShader:send("playerDir", { player.facing.x, player.facing.y })
   FCShader:send("camPlane", { player.camPlane.x, player.camPlane.y })
   FCShader:send("heightScale", magic.heightScale)
@@ -148,11 +151,13 @@ end
 
 -- This function draws the sprites
 local function sprites(player, map)
+  local playerPos = player:getPosition()
+
   -- Sort the sprites by distance to the player
   -- NOTE: This could be removed if it becomes slow, and we rely on the depth buffer
   -- But sorting allows for semi opaque & alpha in sprites to render correctly
   table.sort(map.sprites, function(a, b)
-    return (a.pos - player.pos):length() > (b.pos - player.pos):length()
+    return (a.pos - playerPos):length() > (b.pos - playerPos):length()
   end)
 
   love.graphics.setShader(WallShader)
@@ -160,7 +165,7 @@ local function sprites(player, map)
 
   for s = 1, #map.sprites do
     local sprite = map.sprites[s]
-    sprite:draw(player.pos, player.facing, player.camPlane, WallShader)
+    sprite:draw(playerPos, player.facing, player.camPlane, WallShader)
   end
 
   love.graphics.setShader()
@@ -308,7 +313,7 @@ local function castRay(pos, dir, map, hitList)
   local cell = map:get(gridPos.x, gridPos.y)
 
   -- Check if the cell is thin, we might need to carry on
-  if cell.thin then
+  if cell ~= nil and cell.thin then
     hitList[#hitList + 1] = {
       worldPos = worldPos,
       side = side,
@@ -335,6 +340,8 @@ local function walls(player, map)
   love.graphics.setDepthMode("lequal", true)
   love.graphics.setShader(WallShader)
 
+  local playerPos = player:getPosition()
+
   -- Draw walls using raycasting
   for screenX = 0, love.graphics.getWidth() do
     -- Create a ray from the player position to the screen position
@@ -342,13 +349,13 @@ local function walls(player, map)
 
     -- Cast the ray from player pos, out to find the list of hits
     local hitList = {}
-    castRay(player.pos, ray, map, hitList)
+    castRay(playerPos, ray, map, hitList)
 
     for i = #hitList, 1, -1 do
       local hit = hitList[i]
 
       if hit.cell and hit.cell.render and #hit.cell.textures > 0 then
-        local hitDist = hit.worldPos - player.pos
+        local hitDist = hit.worldPos - playerPos
         hitDist = hitDist:length()
 
         -- Correct the distance to the wall for the fish-eye effect
@@ -374,6 +381,8 @@ local function walls(player, map)
         if hit.doorSide then
           tex = map.tileSet.images["door_sides"]
         end
+
+        -- Handle animated textures
         if #hit.cell.textures > 1 and hit.cell.animateSpeed > 0 then
           -- loop through the textures using timer
           local texIndex = math.floor(love.timer.getTime() * hit.cell.animateSpeed * #hit.cell.textures) %
@@ -381,9 +390,9 @@ local function walls(player, map)
           tex = hit.cell.textures[texIndex]
         end
 
-        if hit.cell.fsm then
+        if hit.cell.state then
           -- If the cell has a fsm, use the current texture
-          tex = hit.cell.fsm:getStateData().currentTexture
+          tex = hit.cell.state:getStateData().currentTexture
         end
 
         -- Call the shader to draw the wall slice (1 px wide) at the correct position & distance
