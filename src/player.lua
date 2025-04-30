@@ -1,5 +1,5 @@
 local vec2 = require "vector"
-local magic = require "magic"
+local consts = require "consts"
 local stateMachine = require "state"
 
 local player = {}
@@ -20,7 +20,7 @@ function player:new(x, y, world)
     turnSpeed = math.rad(0.5), -- radians per second
 
     facing = vec2:new(1, 0),
-    camPlane = vec2:new(0, magic.FOV), -- Camera plane perpendicular to the facing direction
+    camPlane = vec2:new(0, consts.FOV), -- Camera plane perpendicular to the facing direction
     angle = 0,
 
     state = stateMachine:new(),
@@ -62,8 +62,8 @@ function player:setAngle(a)
 
   self.facing.x = math.cos(self.angle)
   self.facing.y = math.sin(self.angle)
-  self.camPlane.x = -self.facing.y * magic.FOV
-  self.camPlane.y = self.facing.x * magic.FOV
+  self.camPlane.x = -self.facing.y * consts.FOV
+  self.camPlane.y = self.facing.x * consts.FOV
 end
 
 function player:move(dt, dir)

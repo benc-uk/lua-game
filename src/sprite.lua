@@ -1,5 +1,5 @@
 local vec2           = require "vector"
-local magic          = require "magic"
+local consts         = require "consts"
 local imageCache     = require "image-cache"
 
 local sprite         = {}
@@ -39,7 +39,7 @@ function sprite:draw(camPos, camDir, camPlane, shader)
   local screenX = (screenWidth / 2) * (1 + transX / transY)
 
   -- Calculate sprite dimensions on screen
-  local height = math.abs(love.graphics.getHeight() * (1 / transY)) * self.scale * aspect * magic.heightScale
+  local height = math.abs(love.graphics.getHeight() * (1 / transY)) * self.scale * aspect * consts.heightScale
   local width = height -- Assuming square sprites
 
   -- Calculate the visible range

@@ -1,6 +1,6 @@
 ---@diagnostic disable: missing-fields
 
-local magic                = require "magic"
+local consts               = require "consts"
 local utils                = require "utils"
 local vec2                 = require "vector"
 
@@ -121,7 +121,7 @@ local function init(tileSetName, tileSize)
   FCShader = love.graphics.newShader(fcPixelcode, fcVertexcode)
   WallShader = love.graphics.newShader(wallSpritePixelcode, wallSpriteVertexcode)
 
-  WallShader:send("maxDist", magic.maxDDA)
+  WallShader:send("maxDist", consts.maxDDA)
 
   FloorImage1 = love.graphics.newImage("assets/tilesets/" .. tileSetName .. "/floor_1.png")
   FloorImage2 = love.graphics.newImage("assets/tilesets/" .. tileSetName .. "/floor_2.png")
@@ -139,7 +139,7 @@ local function floorCeil(player)
   FCShader:send("playerPos", { playPos.x, playPos.y })
   FCShader:send("playerDir", { player.facing.x, player.facing.y })
   FCShader:send("camPlane", { player.camPlane.x, player.camPlane.y })
-  FCShader:send("heightScale", magic.heightScale)
+  FCShader:send("heightScale", consts.heightScale)
   FCShader:send("floorTex1", FloorImage1)
   FCShader:send("floorTex2", FloorImage2)
   FCShader:send("ceilTex", CeilImage)
@@ -210,7 +210,7 @@ local function castRay(pos, dir, map, hitList)
   local steps = 0 -- A simple counter to limit the number of DDA loops
   local thinWallMove = 0
   local doorSide = false
-  while not hit and steps < magic.maxDDA do
+  while not hit and steps < consts.maxDDA do
     -- Jump to next grid square, either in x-direction, or in y-direction
     if sideDistX < sideDistY then
       sideDistX = sideDistX + deltaDistX
@@ -295,7 +295,7 @@ local function castRay(pos, dir, map, hitList)
 
     -- This is a simple counter to put a max distance on the ray
     steps = steps + 1
-    if steps >= magic.maxDDA then
+    if steps >= consts.maxDDA then
       return { worldPos = nil, side = nil, cell = nil }
     end
   end
@@ -365,7 +365,7 @@ local function walls(player, map)
         -- The height of the wall on the screen is inversely proportional to the distance
         local wallHeight = love.graphics.getHeight() / wallHeightDist
         -- Correct for the aspect ratio of the screen
-        wallHeight = wallHeight * (love.graphics.getWidth() / love.graphics.getHeight()) * magic.heightScale
+        wallHeight = wallHeight * (love.graphics.getWidth() / love.graphics.getHeight()) * consts.heightScale
         local wallY = (love.graphics.getHeight() - wallHeight) / 2
 
         -- Texture mapping, get fraction of the world pos to use as the u coordinate of the texture
