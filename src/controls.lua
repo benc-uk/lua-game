@@ -41,13 +41,19 @@ local function keyUp(keyPressed)
   end
 end
 
+local function mouseMove(player, dx)
+  local oldAngle = player.angle
+  local newAngle = oldAngle + dx * player.mouseSensitivity
+  player:setAngle(newAngle)
+end
+
 local function update(dt, player, map)
   if inputs.fwd then
-    player:moveFwdBack(dt, 1)
+    player:move(dt, 1)
   end
 
   if inputs.back then
-    player:moveFwdBack(dt, -1)
+    player:move(dt, -1)
   end
 
   if inputs.turnLeft then
@@ -63,7 +69,7 @@ local function update(dt, player, map)
   end
 
   if inputs.strafeRight then
-    player:strafe(dt, 1)
+    player:strafe(dt, -1)
   end
 
   if inputs.action then
@@ -84,4 +90,5 @@ return {
   keyDown = keyDown,
   keyUp = keyUp,
   update = update,
+  mouseMove = mouseMove,
 }

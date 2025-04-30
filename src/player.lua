@@ -5,7 +5,6 @@ local stateMachine = require "state"
 local player = {}
 player.__index = player
 
-
 function player:new(x, y, world)
   local shape = love.physics.newCircleShape(0.25)
   local body = love.physics.newBody(world, 0, 0, "dynamic")
@@ -17,6 +16,7 @@ function player:new(x, y, world)
 
   local p = {
     moveForce = 0.4,
+    mouseSensitivity = 0.003,
     turnSpeed = math.rad(0.5), -- radians per second
 
     facing = vec2:new(1, 0),
@@ -66,7 +66,7 @@ function player:setAngle(a)
   self.camPlane.y = self.facing.x * magic.FOV
 end
 
-function player:moveFwdBack(dt, dir)
+function player:move(dt, dir)
   self.body:applyForce(
     self.facing.x * dir * dt * self.moveForce,
     self.facing.y * dir * dt * self.moveForce
@@ -84,11 +84,13 @@ function player:strafe(dt, dir)
   )
 end
 
+-- Gets the player's position in world coordinates
 function player:getPosition()
   local x, y = self.body:getPosition()
   return vec2:new(x, y)
 end
 
+-- Constructs a ray from the player's position to the screen coordinates
 function player:getRay(screenX)
   local cameraX = 2 * screenX / love.graphics.getWidth() - 1 -- X-coordinate in camera space
 

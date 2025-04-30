@@ -95,3 +95,9 @@ end
 function love.keyreleased(key)
   controls.keyUp(key)
 end
+
+function love.mousemoved(_, _, dx, _)
+  if love.mouse.isGrabbed() then
+    controls.mouseMove(player, dx)
+  end
+end
