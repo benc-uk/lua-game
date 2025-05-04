@@ -1,8 +1,6 @@
 local json       = require "lib.rxi.json"
 local imageCache = require "image-cache"
 local item       = require "item"
-local utils      = require "utils"
-
 local cell       = require "cell"
 
 local map        = {}
