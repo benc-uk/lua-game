@@ -30,12 +30,8 @@ function love.update(dt)
   end
 
   controls.update(dt, player, map)
-
-  -- Update the physics world
   local oldPos = player:getPosition()
-
-  world:update(dt)
-
+  world:update(dt * 0.5)
   player:update(dt, map, oldPos)
 end
 
