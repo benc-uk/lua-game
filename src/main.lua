@@ -31,7 +31,7 @@ function love.update(dt)
 
   controls.update(dt, player, map)
   local oldPos = player:getPosition()
-  world:update(dt * 0.5)
+  world:update(dt * love.timer.getFPS() * 0.0166666666666667)
   player:update(dt, map, oldPos)
 end
 
