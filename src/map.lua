@@ -118,18 +118,16 @@ function map:load(mapName, world)
 
       if symbol == " " then
         -- % chance of wires from ceiling
-        if math.random(1, 100) <= 10 then
+        if math.random(1, 100) <= 5 then
           c.item = item:new(c, "wires", 1)
           m.sprites[#m.sprites + 1] = c.item.sprite
-          goto done
         end
 
         -- % chance of hook from ceiling
-        if math.random(1, 100) <= 7 then
+        if math.random(1, 100) <= 5 then
           c.item = item:new(c, "hook", 1)
           m.sprites[#m.sprites + 1] = c.item.sprite
         end
-        ::done::
       end
     end
   end
