@@ -76,6 +76,7 @@ local function update(dt, player, map)
     inputs.action = false
 
     local c = player:getCellFacing(map)
+
     if c ~= nil and c.door and c.state then
       if c.state.currentState.name == "closed" then
         c.state:changeState("opening")

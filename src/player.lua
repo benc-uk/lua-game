@@ -1,23 +1,27 @@
-local vec2 = require "vector"
-local consts = require "consts"
+local vec2         = require "vector"
+local consts       = require "consts"
 local stateMachine = require "state"
+local sounds       = require "sounds"
 
-local player = {}
-player.__index = player
+local player       = {}
+player.__index     = player
 
 function player:new(x, y, world)
-  local shape = love.physics.newCircleShape(0.25)
-  local body = love.physics.newBody(world, 0, 0, "dynamic")
+  local shape = love.physics.newCircleShape(0.15)
+  local body = love.physics.newBody(world, x, y, "dynamic")
   body:setMass(1)
-  body:setPosition(x, y)
-  body:setLinearDamping(8.8)
-  body:setAngularDamping(6.8)
-  local _ = love.physics.newFixture(body, shape, 1)
+  body:setLinearDamping(10)
+  body:setInertia(0)
+  body:setAngularDamping(25)
+
+  local fix = love.physics.newFixture(body, shape, 1)
+  fix:setFriction(0)
+  fix:setCategory(1) -- Player category
 
   local p = {
-    moveForce = 0.4,
-    mouseSensitivity = 0.003,
-    turnSpeed = math.rad(0.5), -- radians per second
+    moveForce = 0.1585,
+    turnSpeed = math.rad(0.19), -- radians per second
+    mouseSensitivity = 0.002,   -- radians per pixel
 
     facing = vec2:new(1, 0),
     camPlane = vec2:new(0, consts.FOV), -- Camera plane perpendicular to the facing direction
@@ -36,14 +40,7 @@ function player:new(x, y, world)
   return p
 end
 
-function player:update(dt, map, oldPos)
-  -- Check if the player is inside a wall or out of bounds
-  local x, y = self.body:getPosition()
-  local cell = map:get(math.floor(x), math.floor(y))
-  if (cell == nil or cell.blocking) then
-    self.body:setPosition(oldPos.x, oldPos.y)
-  end
-
+function player:update(dt)
   -- Update the state machine
   self.state:update(dt)
 
@@ -71,6 +68,7 @@ function player:move(dt, dir)
     self.facing.x * dir * dt * self.moveForce,
     self.facing.y * dir * dt * self.moveForce
   )
+  sounds.playFoot()
 end
 
 function player:turn(dt, dir)

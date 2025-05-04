@@ -41,7 +41,16 @@ local function frac(n)
   return n - math.floor(n)
 end
 
+local function hashStr(str)
+  local hash = 0
+  for i = 1, #str do
+    hash = (hash * 31 + str:byte(i)) % 2 ^ 32
+  end
+  return hash
+end
+
 return {
   gradientMesh = gradientMesh,
   frac = frac,
+  hashStr = hashStr,
 }

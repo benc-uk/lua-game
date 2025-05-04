@@ -11,7 +11,7 @@ local world     = love.physics.newWorld(0, 0, true)
 function love.load()
   print("🚀 Starting game...")
 
-  map = mapLib:load("level-1")
+  map = mapLib:load("level-3", world)
 
   player = playerLib:new(map.playerStartCell.x + 0.5, map.playerStartCell.y + 0.5, world)
   player:setAngle(map.playerStartDir * (math.pi / 2))
@@ -71,9 +71,13 @@ function love.draw()
   -- Debug player
   local playerPos = player:getPosition()
   love.graphics.setColor(1, 1, 1)
-  love.graphics.print("Player: " .. playerPos.x .. ", " .. playerPos.y, 10, 10)
-  love.graphics.print("Angle: " .. player.body:getAngle(), 10, 30)
-  love.graphics.print("Speed: " .. player.body:getLinearVelocity(), 10, 50)
+  local playerPosStr = string.format("Player: (%.2f, %.2f)", playerPos.x, playerPos.y)
+  love.graphics.print(playerPosStr, 10, 10)
+  love.graphics.print(string.format("Angle: %.2f", player.body:getAngle()), 10, 34)
+  local plySpeedX, plySpeedY = player.body:getLinearVelocity()
+  local plySpeed = math.sqrt(plySpeedX * plySpeedX + plySpeedY * plySpeedY)
+  local plySpeedStr = string.format("Speed: %.4f", plySpeed)
+  love.graphics.print(plySpeedStr, 10, 58)
 end
 
 function love.keypressed(key)

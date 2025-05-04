@@ -1,12 +1,13 @@
 local json       = require "lib.rxi.json"
 local imageCache = require "image-cache"
 local item       = require "item"
+local utils      = require "utils"
 
 local cell       = require "cell"
 
 local map        = {}
 
-function map:load(mapName)
+function map:load(mapName, world)
   print("💾 Loading map: " .. mapName)
 
   -- Load the map data from JSON file in data/maps/level1.json
@@ -31,7 +32,7 @@ function map:load(mapName)
 
   -- Sprites held in their own array for easy of rendering/sorting
   m.sprites = {}
-  m.name = "Untitled Level"
+  m.name = mapData.name or "default"
   m.tileSetName = mapData.tileset or "default"
   m.width = mapData.width
   m.height = mapData.height
@@ -40,6 +41,7 @@ function map:load(mapName)
   m.tileSet = imageCache:load("assets/tilesets/" .. m.tileSetName)
   m.stateMachines = {}
 
+  local playerSet = false
   -- Loop over mapData.layout populate the cells
   for row = 1, #mapData.layout do
     local dataRow = mapData.layout[row]
@@ -56,19 +58,16 @@ function map:load(mapName)
       -- Set the cell's position
       c.x = col
       c.y = row
-
-      -- Set the cell's render and blocking properties based on the map symbol
       c.render = false
-      c.blocking = false
 
       if symbol == "@" then
         m.playerStartCell.x = col
         m.playerStartCell.y = row
+        playerSet = true
       end
 
       if symbol == "#" then
         c.render = true
-        c.blocking = true
         math.randomseed(c.id)
         local name = "wall_" .. math.random(1, 10)
         if m.tileSet.images[name] == nil then
@@ -87,38 +86,59 @@ function map:load(mapName)
           c.textures[4] = m.tileSet.images[name .. "b"]
           c.animateSpeed = 0.7
         end
+        c:makeSolid(world)
       end
 
       if symbol == "b" then
         c.item = item:new(c, "tank", 1)
         m.sprites[#m.sprites + 1] = c.item.sprite
-        c.blocking = true
+        c:addItemObstruction(world)
       end
 
       if symbol == "t" then
-        c.item = item:new(c, "terminal", 0.7)
+        c.item = item:new(c, "terminal", 0.9)
         m.sprites[#m.sprites + 1] = c.item.sprite
+        c:addItemObstruction(world)
       end
 
       if symbol == "c" then
-        c.item = item:new(c, "crate", 0.8)
+        c.item = item:new(c, "crate", 0.85)
         m.sprites[#m.sprites + 1] = c.item.sprite
-      end
-
-      if symbol == "h" then
-        c.item = item:new(c, "hook", 1)
-        m.sprites[#m.sprites + 1] = c.item.sprite
-      end
-
-      if symbol == "w" then
-        c.item = item:new(c, "wires", 1)
-        m.sprites[#m.sprites + 1] = c.item.sprite
+        c:addItemObstruction(world)
       end
 
       if symbol == "|" or symbol == "-" then
-        m.cells[col][row] = cell:newDoor(col, row, m, false)
+        m.cells[col][row] = cell:newDoor(col, row, m, false, world)
+      end
+
+      if symbol == ":" then
+        c.thin = true
+        c.render = true
+        c:makeSolid(world)
+        c.textures[1] = m.tileSet.images["grate"]
+      end
+
+      if symbol == " " then
+        -- % chance of wires from ceiling
+        if math.random(1, 100) <= 10 then
+          c.item = item:new(c, "wires", 1)
+          m.sprites[#m.sprites + 1] = c.item.sprite
+          goto done
+        end
+
+        -- % chance of hook from ceiling
+        if math.random(1, 100) <= 7 then
+          c.item = item:new(c, "hook", 1)
+          m.sprites[#m.sprites + 1] = c.item.sprite
+        end
+        ::done::
       end
     end
+  end
+
+  -- Check if player start cell was set
+  if not playerSet then
+    error("Player start cell not set in map layout")
   end
 
   setmetatable(m, self)
