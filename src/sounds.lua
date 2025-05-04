@@ -25,7 +25,7 @@ local sounds = {
 
     local foot = footsteps[math.random(1, #footsteps)]
     foot:stop()
-    foot:setPitch(math.random(0.8, 1.2))
+    --foot:setPitch(math.random(0.8, 1.2))
     foot:play()
 
     lastFootPlayed = currentTime
