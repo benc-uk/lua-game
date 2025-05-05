@@ -1,22 +1,21 @@
-local mapLib    = require "map"
-local playerLib = require "player"
-local render    = require "render"
-local sounds    = require "sounds"
-local controls  = require "controls"
-local hud       = require "hud"
+local mapLib   = require "map"
+local player   = require "player"
+local render   = require "render"
+local sounds   = require "sounds"
+local controls = require "controls"
+local hud      = require "hud"
 
-local map       = {}
-local player    = {}
-local world     = love.physics.newWorld(0, 0, true)
+local map      = {}
+local world    = love.physics.newWorld(0, 0, true)
 
 function love.load()
   print("🚀 Starting game...")
 
   map = mapLib:load("level-2", world)
 
-  player = playerLib:new(map.playerStartCell.x + 0.5, map.playerStartCell.y + 0.5, world)
-  player:setAngle(map.playerStartDir * (math.pi / 2))
-  print("🙍‍♂️ Player created and placed: " .. player:getPosition())
+  player.create(map.playerStartCell.x + 0.5, map.playerStartCell.y + 0.5, world)
+  player.setAngle(map.playerStartDir * (math.pi / 2))
+  print("🙍‍♂️ Player created and placed: " .. player.getPosition())
 
   render.init(map.tileSetName, map.tileSet.size.width)
 
@@ -31,9 +30,8 @@ function love.update(dt)
   end
 
   controls.update(dt, player, map)
-  local oldPos = player:getPosition()
-  world:update(dt * love.timer.getFPS() * 0.0166666666666667)
-  player:update(dt, map, oldPos)
+  world:update(dt)
+  player.update(dt)
 end
 
 function love.mousepressed(_, _, button)
@@ -50,6 +48,10 @@ function love.mousepressed(_, _, button)
 end
 
 function love.draw()
+  if player.getBody() == nil then
+    return
+  end
+
   love.graphics.clear(0, 0, 0, 1, true, true)
 
   render.floorCeil(player)
@@ -58,25 +60,7 @@ function love.draw()
 
   render.sprites(player, map)
 
-  -- Show the FPS
-  love.graphics.setFont(love.graphics.newFont(22))
-  love.graphics.setColor(0, 0, 0)
-  love.graphics.print("FPS: " .. love.timer.getFPS(), love.graphics.getWidth() - 120, 5)
-  love.graphics.setColor(1, 1, 1)
-  love.graphics.print("FPS: " .. love.timer.getFPS(), love.graphics.getWidth() - 122, 3)
-
-  -- Debug player
-  local playerPos = player:getPosition()
-  love.graphics.setColor(1, 1, 1)
-  local playerPosStr = string.format("Player: (%.2f, %.2f)", playerPos.x, playerPos.y)
-  love.graphics.print(playerPosStr, 10, 10)
-  love.graphics.print(string.format("Angle: %.2f", player.body:getAngle()), 10, 34)
-  local plySpeedX, plySpeedY = player.body:getLinearVelocity()
-  local plySpeed = math.sqrt(plySpeedX * plySpeedX + plySpeedY * plySpeedY)
-  local plySpeedStr = string.format("Speed: %.4f", plySpeed)
-  love.graphics.print(plySpeedStr, 10, 58)
-
-  hud.titleText(map.name, 3)
+  hud.debug()
 end
 
 function love.keypressed(key)

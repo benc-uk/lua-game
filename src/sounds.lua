@@ -1,3 +1,5 @@
+local conf = require "conf"
+
 local footsteps = {}
 footsteps[1] = love.audio.newSource("assets/sound/foot_1.wav", "static")
 footsteps[2] = love.audio.newSource("assets/sound/foot_2.wav", "static")
@@ -25,7 +27,6 @@ local sounds = {
 
     local foot = footsteps[math.random(1, #footsteps)]
     foot:stop()
-    --foot:setPitch(math.random(0.8, 1.2))
     foot:play()
 
     lastFootPlayed = currentTime
@@ -36,8 +37,7 @@ love.audio.setEffect("verb", {
   type = "reverb"
 })
 
--- TEMPORARY: Disable sound for now
---love.audio.setVolume(0.0)
+love.audio.setVolume(conf.settings.SOUND_VOLUME)
 
 sounds.bgLoop:setLooping(true)
 sounds.bgLoop:setPitch(0.6)

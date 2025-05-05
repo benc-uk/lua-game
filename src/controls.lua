@@ -1,3 +1,5 @@
+local consts = require "consts"
+
 local controls = {
   up = "fwd",
   w = "fwd",
@@ -42,40 +44,38 @@ local function keyUp(keyPressed)
 end
 
 local function mouseMove(player, dx)
-  local oldAngle = player.angle
-  local newAngle = oldAngle + dx * player.mouseSensitivity
-  player:setAngle(newAngle)
+  player.getBody():setAngle(player.getAngle() + dx * consts.mouseSensitivity)
 end
 
 local function update(dt, player, map)
   if inputs.fwd then
-    player:move(dt, 1)
+    player.move(dt, 1)
   end
 
   if inputs.back then
-    player:move(dt, -1)
+    player.move(dt, -1)
   end
 
   if inputs.turnLeft then
-    player:turn(dt, -1)
+    player.turn(dt, -1)
   end
 
   if inputs.turnRight then
-    player:turn(dt, 1)
+    player.turn(dt, 1)
   end
 
   if inputs.strafeLeft then
-    player:strafe(dt, 1)
+    player.strafe(dt, 1)
   end
 
   if inputs.strafeRight then
-    player:strafe(dt, -1)
+    player.strafe(dt, -1)
   end
 
   if inputs.action then
     inputs.action = false
 
-    local c = player:getCellFacing(map)
+    local c = player.getCellFacing(map)
 
     if c ~= nil and c.door and c.state then
       if c.state.currentState.name == "closed" then

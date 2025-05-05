@@ -1,22 +1,27 @@
-local scale = 3
-local titleShownDuration = 0
+local player = require("player")
 
-local function titleText(message, duration)
-  if titleShownDuration > duration then
-    return
-  end
-
-  local x = love.graphics.getWidth() / 2
-  local y = love.graphics.getHeight() / 2
-  local textWidth = love.graphics.getFont():getWidth(message) * scale
+local function dropShadowText(x, y, message, size, scale)
+  local offset = size * 0.1
+  love.graphics.setFont(love.graphics.newFont(size))
   love.graphics.setColor(0, 0, 0, 1)
-  love.graphics.print(message, x - textWidth / 2, y - 10, 0, scale, scale)
+  love.graphics.print(message, x + offset, y + offset, 0, scale, scale)
   love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.print(message, x - 4 - textWidth / 2, y - 14, 0, scale, scale)
+  love.graphics.print(message, x, y, 0, scale, scale)
+end
 
-  titleShownDuration = titleShownDuration + love.timer.getDelta()
+local function debug()
+  local fps = love.timer.getFPS()
+  local playerPos = player.getPosition()
+  local playerPosStr = string.format("Pos: %.2f, %.2f", playerPos.x, playerPos.y)
+
+  dropShadowText(5, 5, "FPS: " .. fps, 16, 1)
+  dropShadowText(5, 25, playerPosStr, 16, 1)
+  dropShadowText(5, 45, string.format("Angle: %.2f", math.deg(player.getAngle())), 16, 1)
+  dropShadowText(5, 65, string.format("Speed: %.2f", player.getSpeed()), 16, 1)
 end
 
 return {
-  titleText = titleText,
+  titleText = function() end,
+  dropShadowText = dropShadowText,
+  debug = debug,
 }

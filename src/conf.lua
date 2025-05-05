@@ -28,3 +28,10 @@ function love.conf(conf)
     conf.window.y = 40
   end
 end
+
+return {
+  settings = {
+    SOUND_VOLUME = 0.0,
+    MUSIC_VOLUME = 0.0,
+  }
+}

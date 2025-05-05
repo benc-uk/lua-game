@@ -16,6 +16,7 @@ function cell:new(x, y)
     textures     = {},    -- Array used to store the textures for the cell
     animateSpeed = 0,     -- Used to determine the speed of the animation for the cell
     item         = nil,   -- Used to store the item in the cell, if any
+    ceilingDecor = nil,   -- Used to store the ceiling decoration for the cell, if any
 
     state        = nil,   -- State machine for the cell, if any, currently only used for doors
     body         = nil,   -- Physics body for the cell, if any
@@ -61,42 +62,40 @@ function cell:block()
   end
 end
 
-function cell:newDoor(x, y, map, open, world)
-  local c = cell:new(x, y)
+function cell:addDoor(map, open, world)
+  self.thin = true
+  self.render = true
+  self.door = true
+  self.textures[1] = map.tileSet.images["door"]
+  self.textures[2] = map.tileSet.images["door_opena"]
+  self.textures[3] = map.tileSet.images["door_openb"]
+  self.textures[4] = map.tileSet.images["door_openc"]
+  self.textures[5] = map.tileSet.images["door_opend"]
 
-  c.thin = true
-  c.render = true
-  c.door = true
-  c.textures[1] = map.tileSet.images["door"]
-  c.textures[2] = map.tileSet.images["door_opena"]
-  c.textures[3] = map.tileSet.images["door_openb"]
-  c.textures[4] = map.tileSet.images["door_openc"]
-  c.textures[5] = map.tileSet.images["door_opend"]
+  self.state = stateMachine:new()
+  self:makeSolid(world)
 
-  c.state = stateMachine:new()
-  c:makeSolid(world)
-
-  c.state:addState("closed", {
+  self.state:addState("closed", {
     onEnter = function(_, data, noSound)
-      c:block()
-      data.currentTexture = c.textures[1]
+      self:block()
+      data.currentTexture = self.textures[1]
       if not noSound then sounds.doorClosed:play() end
     end
   })
 
-  c.state:addState("open", {
+  self.state:addState("open", {
     onEnter = function(_, data)
-      c:unblock()
-      data.currentTexture = c.textures[5]
+      self:unblock()
+      data.currentTexture = self.textures[5]
       sounds.doorOpen:play()
     end
   })
 
-  c.state:addState("opening", {
+  self.state:addState("opening", {
     onEnter = function(_, data)
-      c:block()
+      self:block()
       data.textureIndex = 1
-      data.currentTexture = c.textures[data.textureIndex]
+      data.currentTexture = self.textures[data.textureIndex]
       data.timeToNextFrame = 0.2
       sounds.door:play()
     end,
@@ -104,22 +103,22 @@ function cell:newDoor(x, y, map, open, world)
       data.timeToNextFrame = data.timeToNextFrame - dt
       if data.timeToNextFrame < 0 then
         data.textureIndex = data.textureIndex + 1
-        if data.textureIndex > #c.textures then
+        if data.textureIndex > #self.textures then
           data.textureIndex = 5
           fsm:changeState("open")
         end
 
-        data.currentTexture = c.textures[data.textureIndex]
+        data.currentTexture = self.textures[data.textureIndex]
         data.timeToNextFrame = 0.2
       end
     end
   })
 
-  c.state:addState("closing", {
+  self.state:addState("closing", {
     onEnter = function(_, data)
-      c:block()
+      self:block()
       data.textureIndex = 5
-      data.currentTexture = c.textures[data.textureIndex]
+      data.currentTexture = self.textures[data.textureIndex]
       data.timeToNextFrame = 0.2
       sounds.door:play()
     end,
@@ -131,23 +130,18 @@ function cell:newDoor(x, y, map, open, world)
           fsm:changeState("closed")
         end
 
-        data.currentTexture = c.textures[data.textureIndex]
+        data.currentTexture = self.textures[data.textureIndex]
         data.timeToNextFrame = 0.2
       end
     end
   })
 
-  c.state:changeState("closed", true)
+  self.state:changeState("closed", true)
   if open then
-    c.state:changeState("open", true)
+    self.state:changeState("open", true)
   end
 
-  map.stateMachines[#map.stateMachines + 1] = c.state
-
-  setmetatable(c, self)
-  self.__index = self
-
-  return c
+  map.stateMachines[#map.stateMachines + 1] = self.state
 end
 
 return cell

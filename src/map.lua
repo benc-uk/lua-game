@@ -40,6 +40,11 @@ function map:load(mapName, world)
   m.stateMachines = {}
 
   local playerSet = false
+
+  if #mapData.layout ~= m.height then
+    error("Map height " .. #mapData.layout .. " does not match map data height: " .. m.height)
+  end
+
   -- Loop over mapData.layout populate the cells
   for row = 1, #mapData.layout do
     local dataRow = mapData.layout[row]
@@ -52,11 +57,6 @@ function map:load(mapName, world)
 
       -- It's a string so use sub to get the character
       local symbol = dataRow:sub(col, col)
-
-      -- Set the cell's position
-      c.x = col
-      c.y = row
-      c.render = false
 
       if symbol == "@" then
         m.playerStartCell.x = col
@@ -106,7 +106,7 @@ function map:load(mapName, world)
       end
 
       if symbol == "|" or symbol == "-" then
-        m.cells[col][row] = cell:newDoor(col, row, m, false, world)
+        c:addDoor(m, false, world)
       end
 
       if symbol == ":" then
@@ -125,15 +125,15 @@ function map:load(mapName, world)
 
       if symbol == " " then
         -- % chance of wires from ceiling
-        if math.random(1, 100) <= 5 then
-          c.item = item:new(c, "wires", 1)
-          m.sprites[#m.sprites + 1] = c.item.sprite
+        if math.random(1, 100) <= 8 then
+          c.ceilingDecor = item:new(c, "wires", 1)
+          m.sprites[#m.sprites + 1] = c.ceilingDecor.sprite
         end
 
         -- % chance of hook from ceiling
-        if math.random(1, 100) <= 5 then
-          c.item = item:new(c, "hook", 1)
-          m.sprites[#m.sprites + 1] = c.item.sprite
+        if math.random(1, 100) <= 8 and c.ceilingDecor == nil then
+          c.ceilingDecor = item:new(c, "hook", 1)
+          m.sprites[#m.sprites + 1] = c.ceilingDecor.sprite
         end
       end
     end

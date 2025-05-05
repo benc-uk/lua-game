@@ -137,10 +137,10 @@ end
 local function floorCeil(player)
   love.graphics.setDepthMode("always", false)
 
-  local playPos = player:getPosition()
+  local playPos = player.getPosition()
   FCShader:send("playerPos", { playPos.x, playPos.y })
-  FCShader:send("playerDir", { player.facing.x, player.facing.y })
-  FCShader:send("camPlane", { player.camPlane.x, player.camPlane.y })
+  FCShader:send("playerDir", { player.getFacing().x, player.getFacing().y })
+  FCShader:send("camPlane", { player.getCamPlane().x, player.getCamPlane().y })
   FCShader:send("heightScale", consts.heightScale)
   FCShader:send("floorTex1", FloorImage1)
   FCShader:send("floorTex2", FloorImage2)
@@ -153,7 +153,7 @@ end
 
 -- This function draws the sprites
 local function sprites(player, map)
-  local playerPos = player:getPosition()
+  local playerPos = player.getPosition()
 
   -- Sort the sprites by distance to the player
   -- NOTE: This could be removed if it becomes slow, and we rely on the depth buffer
@@ -167,7 +167,7 @@ local function sprites(player, map)
 
   for s = 1, #map.sprites do
     local sprite = map.sprites[s]
-    sprite:draw(playerPos, player.facing, player.camPlane, WallShader)
+    sprite:draw(playerPos, player.getFacing(), player.getCamPlane(), WallShader)
   end
 
   love.graphics.setShader()
@@ -342,12 +342,12 @@ local function walls(player, map)
   love.graphics.setDepthMode("lequal", true)
   love.graphics.setShader(WallShader)
 
-  local playerPos = player:getPosition()
+  local playerPos = player.getPosition()
 
   -- Draw walls using raycasting
   for screenX = 0, love.graphics.getWidth() do
     -- Create a ray from the player position to the screen position
-    local ray = player:getRay(screenX)
+    local ray = player.getRay(screenX)
 
     -- Cast the ray from player pos, out to find the list of hits
     local hitList = {}
@@ -362,7 +362,7 @@ local function walls(player, map)
 
         -- Correct the distance to the wall for the fish-eye effect
         local wallHeightDist = hitDist *
-            math.cos(math.atan2(ray.y, ray.x) - math.atan2(player.facing.y, player.facing.x))
+            math.cos(math.atan2(ray.y, ray.x) - math.atan2(player.getFacing().y, player.getFacing().x))
 
         -- The height of the wall on the screen is inversely proportional to the distance
         local wallHeight = love.graphics.getHeight() / wallHeightDist
