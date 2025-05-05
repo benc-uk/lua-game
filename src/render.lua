@@ -3,6 +3,8 @@
 local consts          = require "consts"
 local utils           = require "utils"
 local vec2            = require "vector"
+local map             = require "map"
+local player          = require "player"
 
 -- Used for rendering the floor & ceiling
 local floorVertShader = [[
@@ -117,7 +119,10 @@ local tileWidth       = 32
 local tileHeight      = 32
 
 -- Initialize rendering settings here
-local function init(tileSetName, tileSize)
+local function init()
+  local tileSetName = map.getTileSetName()
+  local tileSize    = map.getTileSet().size.width
+
   love.graphics.setDefaultFilter("nearest", "nearest")
 
   FCShader = love.graphics.newShader(floorFragShader, floorVertShader)
@@ -134,7 +139,7 @@ local function init(tileSetName, tileSize)
 end
 
 -- This function draws the floor and ceiling using a GLSL shader
-local function floorCeil(player)
+local function floorCeil()
   love.graphics.setDepthMode("always", false)
 
   local playPos = player.getPosition()
@@ -152,7 +157,7 @@ local function floorCeil(player)
 end
 
 -- This function draws the sprites
-local function sprites(player, map)
+local function sprites()
   local playerPos = player.getPosition()
 
   -- Sort the sprites by distance to the player
@@ -175,7 +180,7 @@ end
 
 -- Cast a ray from the player position in the direction of facing
 -- And update the hit list with the cells we hit
-local function castRay(pos, dir, map, hitList)
+local function castRay(pos, dir, hitList)
   -- Current grid position
   local gridPos = { x = math.floor(pos.x), y = math.floor(pos.y) }
 
@@ -225,7 +230,7 @@ local function castRay(pos, dir, map, hitList)
     end
 
     -- Check if ray has hit something
-    local cell = map:get(gridPos.x, gridPos.y)
+    local cell = map.getCell(gridPos.x, gridPos.y)
     if cell ~= nil and cell.render then
       hit = true
 
@@ -267,7 +272,7 @@ local function castRay(pos, dir, map, hitList)
         -- If we're in a different cell, we hit the side of the wall next to the thin wall
         -- NOTE: Thin walls should *ALWAYS* have walls either side of them, so this should be safe
         if (nextCellPos.x ~= gridPos.x or nextCellPos.y ~= gridPos.y) then
-          cell = map:get(gridPos.x, gridPos.y)
+          cell = map.getCell(gridPos.x, gridPos.y)
           if cell then
             doorSide = true
           end
@@ -312,7 +317,7 @@ local function castRay(pos, dir, map, hitList)
   -- World position of the hit
   local worldPos = vec2:new(pos.x + dir.x * hitDist, pos.y + dir.y * hitDist)
   local cellHitPos = vec2:new(utils.frac(worldPos.x), utils.frac(worldPos.y))
-  local cell = map:get(gridPos.x, gridPos.y)
+  local cell = map.getCell(gridPos.x, gridPos.y)
 
   -- Check if the cell is thin, we might need to carry on
   if cell ~= nil and cell.thin then
@@ -324,7 +329,7 @@ local function castRay(pos, dir, map, hitList)
       doorSide = doorSide,
     }
 
-    return castRay(worldPos, dir, map, hitList)
+    return castRay(worldPos, dir, hitList)
   end
 
   -- If we hit a wall, return the cell and the side we hit
@@ -338,7 +343,7 @@ local function castRay(pos, dir, map, hitList)
 end
 
 -- This function draws the walls using raycasting
-local function walls(player, map)
+local function walls()
   love.graphics.setDepthMode("lequal", true)
   love.graphics.setShader(WallShader)
 
@@ -351,7 +356,7 @@ local function walls(player, map)
 
     -- Cast the ray from player pos, out to find the list of hits
     local hitList = {}
-    castRay(playerPos, ray, map, hitList)
+    castRay(playerPos, ray, hitList)
 
     for i = #hitList, 1, -1 do
       local hit = hitList[i]
@@ -381,7 +386,7 @@ local function walls(player, map)
         -- Special texture overrides for doors and animated textures
         local tex = hit.cell.textures[1]
         if hit.doorSide then
-          tex = map.tileSet.images["door_sides"]
+          tex = map.getTileSet().images["door_sides"]
         end
 
         -- Handle animated textures

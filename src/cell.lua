@@ -62,15 +62,15 @@ function cell:block()
   end
 end
 
-function cell:addDoor(map, open, world)
+function cell:addDoor(open, world, tileSet, stateMachines)
   self.thin = true
   self.render = true
   self.door = true
-  self.textures[1] = map.tileSet.images["door"]
-  self.textures[2] = map.tileSet.images["door_opena"]
-  self.textures[3] = map.tileSet.images["door_openb"]
-  self.textures[4] = map.tileSet.images["door_openc"]
-  self.textures[5] = map.tileSet.images["door_opend"]
+  self.textures[1] = tileSet.images["door"]
+  self.textures[2] = tileSet.images["door_opena"]
+  self.textures[3] = tileSet.images["door_openb"]
+  self.textures[4] = tileSet.images["door_openc"]
+  self.textures[5] = tileSet.images["door_opend"]
 
   self.state = stateMachine:new()
   self:makeSolid(world)
@@ -141,7 +141,7 @@ function cell:addDoor(map, open, world)
     self.state:changeState("open", true)
   end
 
-  map.stateMachines[#map.stateMachines + 1] = self.state
+  stateMachines[#stateMachines + 1] = self.state
 end
 
 return cell

@@ -1,11 +1,20 @@
-local json       = require "lib.rxi.json"
-local imageCache = require "image-cache"
-local item       = require "item"
-local cell       = require "cell"
+local json           = require "lib.rxi.json"
+local imageCache     = require "image-cache"
+local item           = require "item"
+local cell           = require "cell"
 
-local map        = {}
+local sprites        = {}
+local name           = "default"
+local tileSetName    = "default"
+local width          = 0
+local height         = 0
+local playerStart    = { x = 0, y = 0 }
+local playerStartDir = 0
+local tileSet        = nil
+local stateMachines  = {}
+local cells          = {}
 
-function map:load(mapName, world)
+local function load(mapName, world)
   print("💾 Loading map: " .. mapName)
 
   -- Load the map data from JSON file in data/maps/level1.json
@@ -16,72 +25,67 @@ function map:load(mapName, world)
   local mapData = json.decode(fileData)
   assert(mapData, "Error decoding map JSON: " .. filePath)
 
-  print("🗺️ Map '" ..
-    mapData.name .. "' decoded ok, width: " .. mapData.width .. ", height: " .. mapData.height)
+  width = mapData.width
+  height = mapData.height
+  name = mapData.name or "default"
+  tileSetName = mapData.tileset or "default"
+  tileSet = imageCache:load("assets/tilesets/" .. "tech")
 
-  local m = {}
-  m.cells = {}
+  playerStartDir = mapData.playerStartDir or 0
+
+  print("🗺️ Map '" .. name .. "' decoded ok, width: " .. width .. ", height: " .. height)
+
+
   for i = 1, mapData.height do
-    m.cells[i] = {}
+    cells[i] = {}
     for j = 1, mapData.width do
-      m.cells[i][j] = cell:new(i, j)
+      cells[i][j] = cell:new(i, j)
     end
   end
 
-  -- Sprites held in their own array for easy of rendering/sorting
-  m.sprites = {}
-  m.name = mapData.name or "default"
-  m.tileSetName = mapData.tileset or "default"
-  m.width = mapData.width
-  m.height = mapData.height
-  m.playerStartCell = {}
-  m.playerStartDir = mapData.playerStartDir or 3
-  m.tileSet = imageCache:load("assets/tilesets/" .. m.tileSetName)
-  m.stateMachines = {}
-
   local playerSet = false
 
-  if #mapData.layout ~= m.height then
-    error("Map height " .. #mapData.layout .. " does not match map data height: " .. m.height)
+  if #mapData.layout ~= height then
+    error("Map height " .. #mapData.layout .. " does not match map data height: " .. height)
   end
 
   -- Loop over mapData.layout populate the cells
   for row = 1, #mapData.layout do
     local dataRow = mapData.layout[row]
-    if #dataRow ~= m.width then
-      error("Map row " .. row .. " has incorrect width: " .. #dataRow .. ", expected: " .. m.width)
+    if #dataRow ~= width then
+      error("Map row " .. row .. " has incorrect width: " .. #dataRow .. ", expected: " .. width)
     end
 
     for col = 1, #dataRow do
-      local c = m.cells[col][row]
+      local c = cells[col][row]
 
       -- It's a string so use sub to get the character
       local symbol = dataRow:sub(col, col)
 
       if symbol == "@" then
-        m.playerStartCell.x = col
-        m.playerStartCell.y = row
+        playerStart.x = col
+        playerStart.y = row
         playerSet = true
       end
 
       if symbol == "#" then
         c.render = true
         math.randomseed(c.id)
-        local name = "wall_" .. math.random(1, 10)
-        if m.tileSet.images[name] == nil then
-          name = "wall"
+        local wallName = "wall_" .. math.random(1, 10)
+        if tileSet.images[wallName] == nil then
+          wallName = "wall"
         end
 
-        c.textures[1] = m.tileSet.images[name]
+        c.textures[1] = tileSet.images[wallName]
 
-        if m.tileSet.images[name .. "a"] ~= nil then
-          c.textures[2] = m.tileSet.images[name .. "a"]
+        if tileSet.images[wallName .. "a"] ~= nil then
+          c.textures[2] = tileSet.images[wallName .. "a"]
           c.animateSpeed = 0.7
         end
 
-        if m.tileSet.images[name .. "b"] ~= nil then
-          c.textures[3] = m.tileSet.images[name]
-          c.textures[4] = m.tileSet.images[name .. "b"]
+        if tileSet.images[wallName .. "b"] ~= nil then
+          c.textures[3] = tileSet.images[wallName]
+          c.textures[4] = tileSet.images[wallName .. "b"]
           c.animateSpeed = 0.7
         end
         c:makeSolid(world)
@@ -89,51 +93,51 @@ function map:load(mapName, world)
 
       if symbol == "b" then
         c.item = item:new(c, "tank", 1)
-        m.sprites[#m.sprites + 1] = c.item.sprite
+        sprites[#sprites + 1] = c.item.sprite
         c:addItemObstruction(world)
       end
 
       if symbol == "t" then
         c.item = item:new(c, "terminal", 0.9)
-        m.sprites[#m.sprites + 1] = c.item.sprite
+        sprites[#sprites + 1] = c.item.sprite
         c:addItemObstruction(world)
       end
 
       if symbol == "c" then
         c.item = item:new(c, "crate", 0.85)
-        m.sprites[#m.sprites + 1] = c.item.sprite
+        sprites[#sprites + 1] = c.item.sprite
         c:addItemObstruction(world)
       end
 
       if symbol == "|" or symbol == "-" then
-        c:addDoor(m, false, world)
+        c:addDoor(false, world, tileSet, stateMachines)
       end
 
       if symbol == ":" then
         c.thin = true
         c.render = true
         c:makeSolid(world)
-        c.textures[1] = m.tileSet.images["grate"]
+        c.textures[1] = tileSet.images["grate"]
       end
 
       if symbol == "'" then
         c.thin = true
         c.render = true
         c:makeSolid(world)
-        c.textures[1] = m.tileSet.images["window_3"]
+        c.textures[1] = tileSet.images["window_3"]
       end
 
       if symbol == " " then
         -- % chance of wires from ceiling
         if math.random(1, 100) <= 8 then
           c.ceilingDecor = item:new(c, "wires", 1)
-          m.sprites[#m.sprites + 1] = c.ceilingDecor.sprite
+          sprites[#sprites + 1] = c.ceilingDecor.sprite
         end
 
         -- % chance of hook from ceiling
         if math.random(1, 100) <= 8 and c.ceilingDecor == nil then
           c.ceilingDecor = item:new(c, "hook", 1)
-          m.sprites[#m.sprites + 1] = c.ceilingDecor.sprite
+          sprites[#sprites + 1] = c.ceilingDecor.sprite
         end
       end
     end
@@ -143,19 +147,29 @@ function map:load(mapName, world)
   if not playerSet then
     error("Player start cell not set in map layout")
   end
-
-  setmetatable(m, self)
-  self.__index = self
-
-  return m
 end
 
-function map:get(x, y)
-  if x < 1 or x > self.width or y < 1 or y > self.height then
+local function getCell(x, y)
+  if x < 1 or x > width or y < 1 or y > height then
     return nil
   end
 
-  return self.cells[math.floor(x)][math.floor(y)]
+  return cells[math.floor(x)][math.floor(y)]
 end
 
-return map
+return {
+  load = load,
+  getCell = getCell,
+  playerStart = playerStart,
+  stateMachines = stateMachines,
+  sprites = sprites,
+  getTileSet = function()
+    return tileSet
+  end,
+  getTileSetName = function()
+    return tileSetName
+  end,
+  getPlayerStartDir = function()
+    return playerStartDir
+  end,
+}

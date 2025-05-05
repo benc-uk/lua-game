@@ -1,23 +1,21 @@
-local mapLib   = require "map"
+local map      = require "map"
 local player   = require "player"
 local render   = require "render"
 local sounds   = require "sounds"
 local controls = require "controls"
 local hud      = require "hud"
 
-local map      = {}
 local world    = love.physics.newWorld(0, 0, true)
 
 function love.load()
   print("🚀 Starting game...")
 
-  map = mapLib:load("level-2", world)
+  map.load("level-2", world)
 
-  player.create(map.playerStartCell.x + 0.5, map.playerStartCell.y + 0.5, world)
-  player.setAngle(map.playerStartDir * (math.pi / 2))
+  player.create(world)
   print("🙍‍♂️ Player created and placed: " .. player.getPosition())
 
-  render.init(map.tileSetName, map.tileSet.size.width)
+  render.init()
 
   print("♻️ Starting game loop...")
 
@@ -29,8 +27,8 @@ function love.update(dt)
     fsm:update(dt)
   end
 
-  controls.update(dt, player, map)
-  world:update(dt)
+  controls.update(dt)
+  world:update(dt * love.timer.getFPS() * 0.0166666666666667)
   player.update(dt)
 end
 
@@ -54,11 +52,9 @@ function love.draw()
 
   love.graphics.clear(0, 0, 0, 1, true, true)
 
-  render.floorCeil(player)
-
-  render.walls(player, map)
-
-  render.sprites(player, map)
+  render.floorCeil()
+  render.walls()
+  render.sprites()
 
   hud.debug()
 end
@@ -85,6 +81,6 @@ end
 
 function love.mousemoved(_, _, dx, _)
   if love.mouse.isGrabbed() then
-    controls.mouseMove(player, dx)
+    controls.mouseMove(dx)
   end
 end

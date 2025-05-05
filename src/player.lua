@@ -2,6 +2,7 @@ local vec2         = require "vector"
 local consts       = require "consts"
 local stateMachine = require "state"
 local sounds       = require "sounds"
+local map          = require "map"
 
 local moveForce    = 0.1285
 local turnSpeed    = math.rad(0.19) -- radians per second
@@ -14,12 +15,15 @@ local state        = stateMachine:new()
 local shape        = love.physics.newCircleShape(0.15)
 local body         = nil
 
-local function create(x, y, world)
-  body = love.physics.newBody(world, x, y, "dynamic")
+local function create(world)
+  local startAngle = map.getPlayerStartDir() * math.pi / 2
+
+  body = love.physics.newBody(world, map.playerStart.x + 0.5, map.playerStart.y + 0.5, "dynamic")
   body:setMass(1)
   body:setLinearDamping(9)
   body:setInertia(0)
   body:setAngularDamping(18)
+  body:setAngle(startAngle)
   local fix = love.physics.newFixture(body, shape, 1)
   fix:setFriction(0)
   fix:setCategory(1)
@@ -107,7 +111,7 @@ local function getRay(screenX)
 end
 
 -- Fires a ray from the player's position and returns any cell within a distance of 1
-local function getCellFacing(map)
+local function getCellFacing()
   if body == nil then
     return
   end
@@ -117,7 +121,7 @@ local function getCellFacing(map)
   local cellX = math.floor(x + ray.x * 0.8)
   local cellY = math.floor(y + ray.y * 0.8)
 
-  return map:get(cellX, cellY)
+  return map.getCell(cellX, cellY)
 end
 
 local function getSpeed()
