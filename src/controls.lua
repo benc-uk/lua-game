@@ -1,6 +1,5 @@
 local consts   = require "consts"
 local player   = require "player"
-local map      = require "map"
 
 local controls = {
   up = "fwd",
