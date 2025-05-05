@@ -116,6 +116,13 @@ function map:load(mapName, world)
         c.textures[1] = m.tileSet.images["grate"]
       end
 
+      if symbol == "'" then
+        c.thin = true
+        c.render = true
+        c:makeSolid(world)
+        c.textures[1] = m.tileSet.images["window_3"]
+      end
+
       if symbol == " " then
         -- % chance of wires from ceiling
         if math.random(1, 100) <= 5 then

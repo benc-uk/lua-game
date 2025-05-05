@@ -19,7 +19,7 @@ function player:new(x, y, world)
   fix:setCategory(1) -- Player category
 
   local p = {
-    moveForce = 0.1585,
+    moveForce = 0.1285,
     turnSpeed = math.rad(0.19), -- radians per second
     mouseSensitivity = 0.002,   -- radians per pixel
 

@@ -1,10 +1,19 @@
 ---@diagnostic disable: missing-fields
 
-local consts               = require "consts"
-local utils                = require "utils"
-local vec2                 = require "vector"
+local consts          = require "consts"
+local utils           = require "utils"
+local vec2            = require "vector"
 
-local fcPixelcode          = [[
+-- Used for rendering the floor & ceiling
+local floorVertShader = [[
+  vec4 position(mat4 transform_projection, vec4 vertex_position)
+  {
+    return transform_projection * vertex_position;
+  }
+]]
+
+-- Used for rendering the floor & ceiling
+local floorFragShader = [[
   uniform vec2 playerPos;
   uniform vec2 playerDir;
   uniform vec2 camPlane;
@@ -75,15 +84,8 @@ local fcPixelcode          = [[
   }
 ]]
 
-local fcVertexcode         = [[
-  vec4 position(mat4 transform_projection, vec4 vertex_position)
-  {
-    return transform_projection * vertex_position;
-  }
-]]
-
--- Draws a single vertical line of the wall at the depth given
-local wallSpriteVertexcode = [[
+-- Used for rendering the walls & sprites as vertical slices, hitDist used to set depth in z-buffer
+local mainVertShader  = [[
   uniform highp float hitDist;
   uniform highp float maxDist;
 
@@ -95,8 +97,8 @@ local wallSpriteVertexcode = [[
   }
 ]]
 
--- Draws a single vertical line of the wall
-local wallSpritePixelcode  = [[
+-- Used for rendering the walls & sprites as vertical slices, hitDist used to set depth in z-buffer
+local mainFragShader  = [[
   uniform highp float hitDist;
   uniform highp float maxDepth;
 
@@ -106,20 +108,20 @@ local wallSpritePixelcode  = [[
 
     if (texColor.a < 0.1) { discard; }
 
-    float brightness = clamp(2.0 / (hitDist * hitDist), 0.0, 2.0);
-    return vec4(texColor.rgb * brightness, texColor.a);
+    float brightness = clamp(2.0 / (hitDist * hitDist),0.0, 2.0);
+    return vec4(texColor.rgb * brightness, texColor.a) * color;
   }
 ]]
 
-local tileWidth            = 32
-local tileHeight           = 32
+local tileWidth       = 32
+local tileHeight      = 32
 
 -- Initialize rendering settings here
 local function init(tileSetName, tileSize)
   love.graphics.setDefaultFilter("nearest", "nearest")
 
-  FCShader = love.graphics.newShader(fcPixelcode, fcVertexcode)
-  WallShader = love.graphics.newShader(wallSpritePixelcode, wallSpriteVertexcode)
+  FCShader = love.graphics.newShader(floorFragShader, floorVertShader)
+  WallShader = love.graphics.newShader(mainFragShader, mainVertShader)
 
   WallShader:send("maxDist", consts.maxDDA)
 

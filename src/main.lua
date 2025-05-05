@@ -3,6 +3,7 @@ local playerLib = require "player"
 local render    = require "render"
 local sounds    = require "sounds"
 local controls  = require "controls"
+local hud       = require "hud"
 
 local map       = {}
 local player    = {}
@@ -11,7 +12,7 @@ local world     = love.physics.newWorld(0, 0, true)
 function love.load()
   print("🚀 Starting game...")
 
-  map = mapLib:load("level-3", world)
+  map = mapLib:load("level-2", world)
 
   player = playerLib:new(map.playerStartCell.x + 0.5, map.playerStartCell.y + 0.5, world)
   player:setAngle(map.playerStartDir * (math.pi / 2))
@@ -74,6 +75,8 @@ function love.draw()
   local plySpeed = math.sqrt(plySpeedX * plySpeedX + plySpeedY * plySpeedY)
   local plySpeedStr = string.format("Speed: %.4f", plySpeed)
   love.graphics.print(plySpeedStr, 10, 58)
+
+  hud.titleText(map.name, 3)
 end
 
 function love.keypressed(key)
